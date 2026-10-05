@@ -1,0 +1,64 @@
+import OpenAI from "openai";
+import { getEnv } from "../config/env.js";
+
+let clientInstance: OpenAI | null = null;
+
+/**
+ * Initializes and returns an OpenAI-compatible API client.
+ * Works seamlessly with Google Gemini (via OpenAI-compatible endpoint), Groq, OpenRouter, and Ollama.
+ * @returns OpenAI client instance.
+ */
+export function getModelClient(): OpenAI {
+  if (clientInstance) {
+    return clientInstance;
+  }
+
+  const env = getEnv();
+  const apiKey = env.AI_API_KEY || "mock-key";
+
+  clientInstance = new OpenAI({
+    apiKey,
+    baseURL: env.AI_BASE_URL,
+  });
+
+  return clientInstance;
+}
+
+export interface CompletionRequest {
+  systemPrompt: string;
+  userPrompt: string;
+  responseFormat?: "json_object" | "text";
+}
+
+/**
+ * Dispatches a completion request with graceful fallback.
+ * @param request Prompt and options.
+ * @returns Generated text or parsed JSON.
+ */
+export async function generateCompletion(request: CompletionRequest): Promise<string> {
+  const env = getEnv();
+
+  if (env.AI_PROVIDER === "mock" || !env.AI_API_KEY) {
+    // Return deterministic mock JSON or text for offline execution
+    if (request.responseFormat === "json_object") {
+      return JSON.stringify({
+        intentType: "CHAT",
+        responseMessage: "Offline mode active. Intent processed deterministically.",
+      });
+    }
+    return "Operating in offline mode. What would you like to plan?";
+  }
+
+  const client = getModelClient();
+  const response = await client.chat.completions.create({
+    model: env.AI_MODEL,
+    messages: [
+      { role: "system", content: request.systemPrompt },
+      { role: "user", content: request.userPrompt },
+    ],
+    response_format: request.responseFormat === "json_object" ? { type: "json_object" } : undefined,
+    temperature: 0.2,
+  });
+
+  return response.choices[0]?.message.content ?? "";
+}
