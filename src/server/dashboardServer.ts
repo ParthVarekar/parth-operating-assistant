@@ -2182,8 +2182,12 @@ export function startDashboardServer(customPort?: number): http.Server {
 
     try {
       // 1. Health check (Render requirement)
-      if (pathname === "/health" && req.method === "GET") {
+      if (pathname === "/health" && (req.method === "GET" || req.method === "HEAD")) {
         res.writeHead(200, { "Content-Type": "application/json" });
+        if (req.method === "HEAD") {
+          res.end();
+          return;
+        }
         res.end(
           JSON.stringify({
             status: "ok",
@@ -2377,9 +2381,13 @@ export function startDashboardServer(customPort?: number): http.Server {
       }
 
       // 11. Serve Root GUI Dashboard
-      if (pathname === "/" && req.method === "GET") {
+      if (pathname === "/" && (req.method === "GET" || req.method === "HEAD")) {
         const html = getDashboardHtml();
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        if (req.method === "HEAD") {
+          res.end();
+          return;
+        }
         res.end(html);
         return;
       }

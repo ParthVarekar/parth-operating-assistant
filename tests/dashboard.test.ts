@@ -145,6 +145,14 @@ describe("Dashboard Server & Hanzo Web GUI", () => {
     expect(text).toContain("PARTH.OS");
   });
 
+  it("responds 200 OK to HEAD requests on / and /health", async () => {
+    const resRoot = await fetch(`http://127.0.0.1:${TEST_PORT}/`, { method: "HEAD" });
+    expect(resRoot.status).toBe(200);
+
+    const resHealth = await fetch(`http://127.0.0.1:${TEST_PORT}/health`, { method: "HEAD" });
+    expect(resHealth.status).toBe(200);
+  });
+
   it("returns 404 on invalid route", async () => {
     const res = await fetch(`http://127.0.0.1:${TEST_PORT}/unknown-route`);
     expect(res.status).toBe(404);

@@ -9,7 +9,8 @@
     "test": "vitest run",
     "auth:trello": "tsx src/integrations/trelloAuth.ts",
     "auth:whatsapp": "tsx src/integrations/whatsappAuth.ts",
-    "export:whatsapp": "tsx src/scripts/exportWhatsAppAuth.ts"
+    "export:whatsapp": "tsx src/scripts/exportWhatsAppAuth.ts",
+    "sync:render": "tsx src/scripts/syncRenderConfig.ts"
   },
   "engines": {
     "node": ">=22.5.0"
