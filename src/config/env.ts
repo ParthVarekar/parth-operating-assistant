@@ -21,6 +21,7 @@ const EnvSchema = z.object({
   DISCORD_BOT_TOKEN: z.string().default(""),
   DISCORD_CHANNEL_ID: z.string().default(""),
   SLACK_WEBHOOK_URL: z.string().default(""),
+  PORT: z.coerce.number().default(3050),
 });
 
 export type EnvConfig = z.infer<typeof EnvSchema>;

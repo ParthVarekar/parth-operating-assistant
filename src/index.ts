@@ -12,6 +12,11 @@ import {
   startDiscordBot,
   stopDiscordBot,
 } from "./services/discordService.js";
+import {
+  startDashboardServer,
+  stopDashboardServer,
+} from "./server/dashboardServer.js";
+import { seedInitialCuratedHackathons } from "./db/repositories/hackathonRepository.js";
 
 async function main() {
   console.log("==================================================");
@@ -21,7 +26,12 @@ async function main() {
   // 1. Initialize SQLite Database with WAL mode
   console.log("📦 Initializing SQLite database...");
   initDatabase();
-  console.log("✅ Database initialized successfully.");
+  seedInitialCuratedHackathons();
+  console.log("✅ Database initialized and hackathons seeded.");
+
+  // 1.5 Start Hanzo-styled Web Dashboard & REST API Server
+  console.log("🌐 Starting Hanzo Web Dashboard & REST API Server...");
+  startDashboardServer();
 
   // 2. Start Proactive Event Heartbeat
   console.log("⏱️ Starting proactive scheduler heartbeat (15s tick)...");
@@ -57,16 +67,18 @@ async function main() {
 }
 
 // Graceful shutdown handling
-process.on("SIGINT", () => {
+process.on("SIGINT", async () => {
   console.log("\n🛑 Received SIGINT. Shutting down gracefully...");
+  await stopDashboardServer();
   stopHeartbeat();
   stopWhatsAppClient();
   stopDiscordBot();
   process.exit(0);
 });
 
-process.on("SIGTERM", () => {
+process.on("SIGTERM", async () => {
   console.log("\n🛑 Received SIGTERM. Shutting down gracefully...");
+  await stopDashboardServer();
   stopHeartbeat();
   stopWhatsAppClient();
   stopDiscordBot();

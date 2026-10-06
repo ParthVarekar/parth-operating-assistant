@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: parth-operating-assistant
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_ALLOWED_USER_ID
+        sync: false
+      - key: DISCORD_WEBHOOK_URL
+        sync: false
+      - key: DISCORD_BOT_TOKEN
+        sync: false
+      - key: DISCORD_CHANNEL_ID
+        sync: false
+      - key: AI_PROVIDER
+        value: gemini
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_MODEL
+        value: gemini-2.0-flash
+      - key: DATABASE_PATH
+        value: ./data/assistant.db
+      - key: GITHUB_USERNAME
+        value: ParthVarekar
+      - key: USER_DINNER_TIME
+        value: "21:30"
+      - key: USER_SLEEP_TIME
+        value: "04:30"
+      - key: USER_DEEP_WORK_START
+        value: "23:00"
+      - key: USER_COLLEGE_RETURN_TIME
+        value: "19:30"

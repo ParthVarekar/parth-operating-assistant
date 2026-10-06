@@ -1,0 +1,7 @@
+node_modules
+npm-debug.log
+data/assistant.db*
+data/whatsapp_auth
+.env
+.git
+tests
