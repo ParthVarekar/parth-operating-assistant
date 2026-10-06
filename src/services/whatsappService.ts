@@ -13,6 +13,14 @@ import { ingestProfessorAnnouncement } from "./announcementParser.js";
 import { broadcastAcademicNoticeToDiscord } from "./discordService.js";
 import { appendChatMessage } from "../agent/chatHandler.js";
 
+import {
+  checkContentDuplicate,
+  extractStudyResources,
+  isSubstantiveContent,
+  recordIngestedContent,
+  listSavedStudyResources,
+} from "./contentDeduplicationService.js";
+
 export function getWhatsAppAuthDir(): string {
   return process.env.WHATSAPP_AUTH_DIR || resolve(process.cwd(), "data", "whatsapp_auth");
 }
@@ -25,6 +33,8 @@ export interface WhatsAppAcademicAlert {
   timestamp: string;
   tasksCount: number;
   physicalSubmissionsCount: number;
+  studyResourcesCount?: number;
+  isDirectMessage?: boolean;
 }
 
 const ACADEMIC_KEYWORDS = [
@@ -250,7 +260,7 @@ export async function startWhatsAppClient(): Promise<boolean> {
       }
     });
 
-    // Listen to incoming messages
+    // Listen to incoming messages across ALL chats (personal DMs and groups)
     sock.ev.on("messages.upsert", async ({ messages, type }) => {
       if (type !== "notify") return;
 
@@ -261,7 +271,7 @@ export async function startWhatsAppClient(): Promise<boolean> {
         if (!conversationText) continue;
 
         const senderJid = msg.key.remoteJid ?? "unknown";
-        const senderName = msg.pushName || senderJid.split("@")[0] || "College Chat";
+        const senderName = msg.pushName || senderJid.split("@")[0] || "Contact";
         const isGroup = senderJid.endsWith("@g.us");
 
         let chatName = senderName;
@@ -270,19 +280,53 @@ export async function startWhatsAppClient(): Promise<boolean> {
         if (isGroup) {
           chatName = await resolveGroupSubject(sock, senderJid);
           isPriorityGroup = isMonitoredAcademicGroup(chatName);
+        } else {
+          chatName = `${senderName} (DM)`;
         }
 
-        // If it's not a recognized priority group AND doesn't match academic keywords, skip
-        if (!isPriorityGroup && !isAcademicMessage(conversationText)) {
+        // 1. Substantive content filter: ignore casual chit-chat ("ok", "k", "haan", "cool", "see you")
+        // Always allow priority groups, but for all other chats/DMs require substantive content or links
+        if (!isPriorityGroup && !isSubstantiveContent(conversationText)) {
           continue;
         }
 
-        console.log(`📑 Ingesting notice from [${chatName}] by ${senderName}: "${conversationText.slice(0, 60)}..."`);
+        // 2. Deduplication Engine: Detect repeated notices, forwarded links, or redundant material
+        const dupCheck = checkContentDuplicate(conversationText, chatName, senderName);
+        if (dupCheck.isDuplicate) {
+          recordIngestedContent({
+            text: conversationText,
+            chatName,
+            sender: senderName,
+          });
+          const originalSource = dupCheck.duplicateOf?.firstSeenIn ?? "prior task";
+          const matchPercent = Math.round((dupCheck.similarityScore ?? 1) * 100);
+          console.log(
+            `🔁 Duplicate ignored from [${chatName}] by ${senderName} (Reason: ${dupCheck.reason}, ${matchPercent}% match with [${originalSource}]). Not posting.`
+          );
+          continue;
+        }
+
+        console.log(`📑 Ingesting unique material from [${chatName}] by ${senderName}: "${conversationText.slice(0, 60)}..."`);
 
         try {
+          // Record content in deduplication index
+          recordIngestedContent({
+            text: conversationText,
+            chatName,
+            sender: senderName,
+          });
+
+          // Extract study resources (Drive documents, GitHub repos, PDFs, lecture notes)
+          const studyResources = extractStudyResources(conversationText, chatName, senderName);
+
+          // Ingest academic tasks and physical submissions
           const ingestion = await ingestProfessorAnnouncement(conversationText);
 
-          if (ingestion.tasksCreated.length > 0 || ingestion.physicalSubmissionsCount > 0) {
+          if (
+            ingestion.tasksCreated.length > 0 ||
+            ingestion.physicalSubmissionsCount > 0 ||
+            studyResources.length > 0
+          ) {
             const alert: WhatsAppAcademicAlert = {
               id: crypto.randomUUID(),
               sender: senderName,
@@ -291,6 +335,8 @@ export async function startWhatsAppClient(): Promise<boolean> {
               timestamp: new Date().toISOString(),
               tasksCount: ingestion.tasksCreated.length,
               physicalSubmissionsCount: ingestion.physicalSubmissionsCount,
+              studyResourcesCount: studyResources.length,
+              isDirectMessage: !isGroup,
             };
 
             const existing = getUserProfile<WhatsAppAcademicAlert[]>("whatsapp_recent_alerts") ?? [];
@@ -303,10 +349,15 @@ export async function startWhatsAppClient(): Promise<boolean> {
             });
 
             // 2. Stream notice into Dashboard Chat stream
+            const resourceSummary =
+              studyResources.length > 0
+                ? `\n📚 Indexed ${studyResources.length} study resource(s): ${studyResources.map((r) => r.title).join(", ")}`
+                : "";
+
             appendChatMessage({
               id: crypto.randomUUID(),
               role: "system",
-              text: `📢 **College Announcement Captured from ${chatName}** (${senderName}):\n"${conversationText}"\n👉 Added ${ingestion.tasksCreated.length} task(s) and flagged ${ingestion.physicalSubmissionsCount} physical lab turn(s).`,
+              text: `📢 **Academic Notice / Resource Captured from ${chatName}** (${senderName}):\n"${conversationText}"\n👉 Added ${ingestion.tasksCreated.length} task(s) and flagged ${ingestion.physicalSubmissionsCount} physical lab turn(s).${resourceSummary}`,
               timestamp: new Date().toISOString(),
               channel: "whatsapp",
             });
@@ -410,3 +461,11 @@ export function formatWhatsAppStatusDigest(): string {
 
   return lines.join("\n");
 }
+
+export {
+  checkContentDuplicate,
+  recordIngestedContent,
+  extractStudyResources,
+  listSavedStudyResources,
+  isSubstantiveContent,
+};

@@ -268,7 +268,7 @@ export async function broadcastHackathonToDiscord(hackathon: {
 }
 
 /**
- * Broadcasts academic notice (e.g. from WhatsApp Important Announcements) to Discord #academic-turns channel.
+ * Broadcasts academic notice or study resource (from any WhatsApp chat, group or friend DM) to Discord #college-announcements.
  */
 export async function broadcastAcademicNoticeToDiscord(alert: {
   sender: string;
@@ -276,19 +276,34 @@ export async function broadcastAcademicNoticeToDiscord(alert: {
   text: string;
   tasksCount: number;
   physicalSubmissionsCount: number;
+  studyResourcesCount?: number;
+  isDirectMessage?: boolean;
 }): Promise<boolean> {
+  const fields = [
+    { name: "Source", value: alert.chatName, inline: true },
+    { name: "Sender", value: alert.sender, inline: true },
+    { name: "Tasks Added", value: `${alert.tasksCount}`, inline: true },
+    {
+      name: "Physical Submissions",
+      value: alert.physicalSubmissionsCount > 0 ? `🚨 ${alert.physicalSubmissionsCount} Journal/Xerox` : "Digital",
+      inline: true,
+    },
+  ];
+
+  if (alert.studyResourcesCount && alert.studyResourcesCount > 0) {
+    fields.push({
+      name: "Study Resources",
+      value: `📚 ${alert.studyResourcesCount} Material Link(s)`,
+      inline: true,
+    });
+  }
+
   return sendSegregatedDiscordEmbed("academic", {
-    title: `📢 College Academic Announcement (${alert.chatName})`,
+    title: alert.isDirectMessage
+      ? `📩 Study Resource / Coursework from ${alert.sender}`
+      : `📢 Academic Announcement (${alert.chatName})`,
     description: `"${alert.text}"`,
-    fields: [
-      { name: "Sender", value: alert.sender, inline: true },
-      { name: "Tasks Added", value: `${alert.tasksCount}`, inline: true },
-      {
-        name: "Physical Submissions",
-        value: alert.physicalSubmissionsCount > 0 ? `🚨 ${alert.physicalSubmissionsCount} Journal/Xerox` : "Digital",
-        inline: true,
-      },
-    ],
+    fields,
     footer: "Antigravity • #college-announcements",
   });
 }
