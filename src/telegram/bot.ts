@@ -28,6 +28,10 @@ import {
   syncTrelloBoard,
   getTrelloBoards,
 } from "../services/trelloService.js";
+import {
+  formatClassroomStatusDigest,
+  syncClassroomAssignments,
+} from "../services/googleClassroomService.js";
 import type { CityZone, SubmissionStage } from "../types/index.js";
 
 /**
@@ -45,6 +49,8 @@ export function createTelegramBot(): Bot {
     .text("⚠️ Slipped/Late").text("🔄 Plan Tonight")
     .row()
     .text("🚀 Hackathons").text("📌 Trello Sync")
+    .row()
+    .text("🎓 Classroom")
     .resized();
 
   // Authentication Guard Middleware
@@ -300,6 +306,74 @@ export function createTelegramBot(): Bot {
     );
   });
 
+  // /classroom Command & "🎓 Classroom"
+  const handleClassroomCommand = async (ctx: Context) => {
+    const text = await formatClassroomStatusDigest();
+    const kb = new InlineKeyboard()
+      .text("🔄 Sync Coursework Now", "classroom_sync")
+      .row()
+      .text("ℹ️ How to Connect Feed", "classroom_help");
+    await ctx.reply(text, { reply_markup: kb, parse_mode: "Markdown" });
+  };
+
+  bot.command("classroom", handleClassroomCommand);
+  bot.hears("🎓 Classroom", handleClassroomCommand);
+
+  bot.command("classroom_feed", async (ctx) => {
+    const url = ctx.message?.text?.replace(/^\/classroom_feed\s*/, "").trim();
+    if (!url || !url.startsWith("http")) {
+      await ctx.reply(
+        "⚠️ Please provide a valid calendar feed URL:\n`/classroom_feed https://calendar.google.com/.../basic.ics`",
+        { parse_mode: "Markdown" }
+      );
+      return;
+    }
+
+    await ctx.reply("🔄 Fetching and parsing Classroom assignments from feed...");
+    try {
+      const result = await syncClassroomAssignments(url);
+      await ctx.reply(
+        `✅ *Google Classroom Linked & Synced!*\n\n` +
+        `• *Assignments Synced:* ${result.syncedTasksCount}\n` +
+        `• *Physical Submissions Identified:* ${result.newSubmissionsCount}\n\n` +
+        `Deadlines and printable tasks have been registered into your operating schedule!`,
+        { parse_mode: "Markdown" }
+      );
+    } catch (err) {
+      await ctx.reply(`❌ *Failed to sync Classroom feed:* ${String(err)}`);
+    }
+  });
+
+  bot.callbackQuery("classroom_sync", async (ctx) => {
+    await ctx.answerCallbackQuery({ text: "Syncing Google Classroom..." });
+    try {
+      const result = await syncClassroomAssignments();
+      await ctx.reply(
+        `✅ *Classroom Sync Complete!*\n` +
+        `• *Assignments Synced:* ${result.syncedTasksCount}\n` +
+        `• *Physical Submissions Added:* ${result.newSubmissionsCount}\n\n` +
+        `Schedule updated to protect submission deadlines!`,
+        { parse_mode: "Markdown" }
+      );
+    } catch (err) {
+      await ctx.reply(`⚠️ *Classroom Sync Notice:* ${String(err)}`);
+    }
+  });
+
+  bot.callbackQuery("classroom_help", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await ctx.reply(
+      `🎓 *Connecting Google Classroom (Zero Developer Setup):*\n\n` +
+      `1️⃣ Open [Google Calendar](https://calendar.google.com) on your computer.\n` +
+      `2️⃣ On the left sidebar under *Other calendars* or *My calendars*, locate your Classroom course.\n` +
+      `3️⃣ Click the 3 dots (⋮) ➔ *Settings and sharing*.\n` +
+      `4️⃣ Scroll down to *Integrate calendar* and copy the **Secret address in iCal format**.\n` +
+      `5️⃣ Simply send that link to this chat or use:\n` +
+      `\`/classroom_feed <paste_link_here>\``,
+      { parse_mode: "Markdown" }
+    );
+  });
+
   // Inline Button Callbacks
   bot.callbackQuery(/^hack_zone:(.+)$/, async (ctx) => {
     const zoneStr = ctx.match[1] ?? "all";
@@ -423,6 +497,29 @@ export function createTelegramBot(): Bot {
       });
       await ctx.reply("🍱 Meal logged! Keep fueling your gym recovery.", { reply_markup: mainKeyboard });
       return;
+    }
+
+    // Auto-detect pasted Google Classroom iCal feed URLs
+    if (text.includes("calendar.google.com/calendar/ical/") || (text.includes("http") && text.includes(".ics"))) {
+      const urlMatch = text.match(/https?:\/\/[^\s]+/);
+      if (urlMatch) {
+        const feedUrl = urlMatch[0];
+        await ctx.reply("🔄 Detected Google Classroom calendar feed! Fetching coursework and submissions...");
+        try {
+          const result = await syncClassroomAssignments(feedUrl);
+          await ctx.reply(
+            `✅ *Google Classroom Linked & Synced!*\n\n` +
+            `• *Assignments Synced:* ${result.syncedTasksCount}\n` +
+            `• *Physical Submissions Added:* ${result.newSubmissionsCount}\n\n` +
+            `Your daily operating schedule has been updated!`,
+            { reply_markup: mainKeyboard, parse_mode: "Markdown" }
+          );
+          return;
+        } catch (err) {
+          await ctx.reply(`❌ Could not sync feed: ${String(err)}`);
+          return;
+        }
+      }
     }
 
     // Process natural language through Intent Parser
