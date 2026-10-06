@@ -37,6 +37,8 @@ export function listUpcomingHackathons(
 export function formatHackathonCard(h: HackathonRecord): string {
   const bookmarkIcon = h.isBookmarked ? "⭐ [Saved]" : "☆ [Unsaved]";
   const tagsStr = h.tags.map((t) => `#${t.replace(/\s+/g, "")}`).join(" ");
+  const conductionStr =
+    h.startDate === h.endDate ? h.startDate : `${h.startDate} → ${h.endDate}`;
 
   return (
     `🚀 *${h.title}*\n` +
@@ -44,7 +46,7 @@ export function formatHackathonCard(h: HackathonRecord): string {
     `📍 *Location:* ${h.location} (${h.cityZone.toUpperCase()})\n` +
     `🏢 *Venue:* ${h.venue}\n` +
     `🌐 *Mode:* ${h.mode.toUpperCase()}\n` +
-    `📅 *Event Dates:* ${h.startDate} → ${h.endDate}\n` +
+    `🗓️ *Conduction Dates:* ${conductionStr}\n` +
     `🚨 *Registration Deadline:* ${h.registrationDeadline}\n` +
     (h.prizePool ? `💰 *Prize Pool:* ${h.prizePool}\n` : "") +
     `🏷 *Tags:* ${tagsStr}\n` +
@@ -75,10 +77,14 @@ export function formatHackathonListDigest(
   for (let i = 0; i < hackathons.length; i++) {
     const h = hackathons[i]!;
     const mark = h.isBookmarked ? " ⭐" : "";
+    const conductionStr =
+      h.startDate === h.endDate ? h.startDate : `${h.startDate} → ${h.endDate}`;
+
     lines.push(
       `${i + 1}. *${h.title}*${mark}\n` +
-      `   📍 ${h.location} | \`${h.mode}\`\n` +
-      `   🚨 Deadline: *${h.registrationDeadline}*` +
+      `   📍 ${h.location} | \`${h.mode.toUpperCase()}\`\n` +
+      `   🗓️ *Conducted On:* ${conductionStr}\n` +
+      `   🚨 *Reg Deadline:* ${h.registrationDeadline}` +
       (h.prizePool ? ` | 💰 ${h.prizePool}` : "") +
       `\n   🔗 ${h.url}`
     );
@@ -111,11 +117,13 @@ export function convertHackathonToTask(hackathonId: string): Task | null {
   const taskId = crypto.randomUUID();
   const taskTitle = `Register & Team Formation: ${hack.title}`;
   const now = new Date().toISOString();
+  const conductionStr =
+    hack.startDate === hack.endDate ? hack.startDate : `${hack.startDate} → ${hack.endDate}`;
 
   const newTask: Task = {
     id: taskId,
     title: taskTitle,
-    description: `Venue: ${hack.venue}. Mode: ${hack.mode}. Portal: ${hack.url}. Prize: ${hack.prizePool ?? "N/A"}.`,
+    description: `Conduction Dates: ${conductionStr}. Venue: ${hack.venue}. Mode: ${hack.mode}. Portal: ${hack.url}. Prize: ${hack.prizePool ?? "N/A"}.`,
     category: "coding",
     status: "pending",
     priority: "high",

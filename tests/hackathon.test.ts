@@ -84,16 +84,21 @@ describe("Hackathon Finder & Regional Integration Suite", () => {
     expect(card).toContain("Andheri West");
     expect(card).toContain("OFFLINE");
     expect(card).toContain("₹1,50,000");
+    expect(card).toContain("Conduction Dates");
+    expect(card).toContain("2026-10-24 → 2026-10-25");
+    expect(card).toContain("Registration Deadline");
     expect(card).toContain("https://devfolio.co/hackspit2026");
   });
 
-  it("formats summary digests with multiple entries", () => {
+  it("formats summary digests with multiple entries and conduction dates", () => {
     const hacks = listUpcomingHackathons("mumbai");
     const digest = formatHackathonListDigest(hacks, "Mumbai Hackathons");
 
     expect(digest).toContain("Mumbai Hackathons");
     expect(digest).toContain("HackSPIT");
     expect(digest).toContain("VJTI");
+    expect(digest).toContain("Conducted On:");
+    expect(digest).toContain("Reg Deadline:");
   });
 
   it("converts a hackathon into an actionable scheduled task in the OS", () => {
@@ -103,6 +108,7 @@ describe("Hackathon Finder & Regional Integration Suite", () => {
     expect(createdTask?.category).toBe("coding");
     expect(createdTask?.priority).toBe("high");
     expect(createdTask?.estimatedMinutes).toBe(45);
+    expect(createdTask?.description).toContain("Conduction Dates: 2026-10-24 → 2026-10-25");
 
     const pending = findPendingTasks();
     expect(pending.some((t) => t.id === createdTask?.id)).toBe(true);
