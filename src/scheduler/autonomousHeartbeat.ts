@@ -279,6 +279,40 @@ export async function tickAutonomousHeartbeat(): Promise<void> {
 }
 }
 
+let keepAliveTimer: NodeJS.Timeout | null = null;
+
+/**
+ * Pings the application's external health endpoint to prevent free-tier cloud platforms
+ * (like Render) from sleeping after 15 minutes of inactivity.
+ */
+export function startKeepAliveLoop(intervalMs = 600000): void {
+  const targetUrl = process.env.RENDER_EXTERNAL_URL || process.env.KEEP_ALIVE_URL;
+  if (!targetUrl || keepAliveTimer) return;
+
+  const pingUrl = targetUrl.replace(/\/+$/, "") + "/health";
+  console.log(`🌐 Cloud Keep-Alive loop active: pinging ${pingUrl} every ${intervalMs / 60000}m`);
+
+  keepAliveTimer = setInterval(async () => {
+    try {
+      const res = await fetch(pingUrl, {
+        headers: { "User-Agent": "Autonomous-KeepAlive/1.0" },
+      });
+      if (res.ok) {
+        console.log(`📡 Keep-Alive heartbeat verified at ${new Date().toISOString()}`);
+      }
+    } catch (err: any) {
+      console.warn("⚠️ Keep-Alive heartbeat ping failed:", err?.message || err);
+    }
+  }, intervalMs);
+}
+
+export function stopKeepAliveLoop(): void {
+  if (keepAliveTimer) {
+    clearInterval(keepAliveTimer);
+    keepAliveTimer = null;
+  }
+}
+
 /**
  * Starts the autonomous multi-cadence heartbeat loop.
  * @param intervalMs Heartbeat cycle frequency (default 30000ms / 30 seconds).
@@ -293,6 +327,8 @@ export function startAutonomousHeartbeat(intervalMs = 30000): void {
     tickAutonomousHeartbeat().catch(console.error);
   }, intervalMs);
 
+  startKeepAliveLoop();
+
   console.log(`⏱️ Autonomous Heartbeat active (cycling every ${intervalMs / 1000}s). Multi-cadence ingestion & proactive outreach ready.`);
 }
 
@@ -304,4 +340,5 @@ export function stopAutonomousHeartbeat(): void {
     clearInterval(autonomousTimer);
     autonomousTimer = null;
   }
+  stopKeepAliveLoop();
 }

@@ -6,7 +6,8 @@ import makeWASocket, {
   type ConnectionState,
 } from "@whiskeysockets/baileys";
 import pino from "pino";
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, rmSync, writeFileSync, mkdirSync, readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
 import { resolve } from "node:path";
 import { getUserProfile, setUserProfile } from "../db/repositories/habitRepository.js";
 import { ingestProfessorAnnouncement } from "./announcementParser.js";
@@ -130,10 +131,91 @@ export async function resolveGroupSubject(sock: WASocket, groupJid: string): Pro
 }
 
 /**
+ * Restores WhatsApp authentication files in ephemeral cloud environments (e.g. Render, Railway).
+ * Checks WHATSAPP_AUTH_BASE64, WHATSAPP_CREDS_JSON, WHATSAPP_CREDS_BASE64, or secret file paths.
+ */
+export function restoreCloudWhatsAppAuth(): boolean {
+  const authDir = getWhatsAppAuthDir();
+
+  // If creds.json already exists on disk, nothing to restore
+  if (existsSync(resolve(authDir, "creds.json"))) {
+    return true;
+  }
+
+  // Ensure target directory exists
+  mkdirSync(authDir, { recursive: true });
+
+  // 1. Check for full gzipped base64 bundle (WHATSAPP_AUTH_BASE64)
+  const bundleBase64 = process.env.WHATSAPP_AUTH_BASE64;
+  if (bundleBase64 && bundleBase64.trim().length > 0) {
+    try {
+      const buffer = Buffer.from(bundleBase64.trim(), "base64");
+      const decompressed = gunzipSync(buffer).toString("utf-8");
+      const fileMap = JSON.parse(decompressed);
+      if (typeof fileMap === "object" && fileMap !== null) {
+        for (const [filename, content] of Object.entries(fileMap)) {
+          const safeName = resolve(authDir, filename);
+          if (safeName.startsWith(authDir)) {
+            writeFileSync(safeName, content as string, "utf-8");
+          }
+        }
+        if (existsSync(resolve(authDir, "creds.json"))) {
+          console.log(`📦 Successfully restored WhatsApp session files from WHATSAPP_AUTH_BASE64 into ${authDir}`);
+          return true;
+        }
+      }
+    } catch (err: any) {
+      console.warn("⚠️ Failed to unpack WHATSAPP_AUTH_BASE64:", err?.message || err);
+    }
+  }
+
+  // 2. Check for secret file path (Render Secret File, e.g. /etc/secrets/whatsapp_auth.json or WHATSAPP_AUTH_FILE)
+  const authFilePath = process.env.WHATSAPP_AUTH_FILE || (existsSync("/etc/secrets/whatsapp_auth.json") ? "/etc/secrets/whatsapp_auth.json" : null);
+  if (authFilePath && existsSync(authFilePath)) {
+    try {
+      const content = readFileSync(authFilePath, "utf-8");
+      const fileMap = JSON.parse(content);
+      if (typeof fileMap === "object" && fileMap !== null) {
+        for (const [filename, fileContent] of Object.entries(fileMap)) {
+          const safeName = resolve(authDir, filename);
+          if (safeName.startsWith(authDir)) {
+            writeFileSync(safeName, fileContent as string, "utf-8");
+          }
+        }
+        if (existsSync(resolve(authDir, "creds.json"))) {
+          console.log(`📦 Successfully restored WhatsApp session files from Secret File ${authFilePath}`);
+          return true;
+        }
+      }
+    } catch (err: any) {
+      console.warn(`⚠️ Failed to unpack secret file ${authFilePath}:`, err?.message || err);
+    }
+  }
+
+  // 3. Check for standalone creds.json environment variable
+  const credsJson = process.env.WHATSAPP_CREDS_JSON || (process.env.WHATSAPP_CREDS_BASE64 ? Buffer.from(process.env.WHATSAPP_CREDS_BASE64, "base64").toString("utf-8") : null);
+  if (credsJson && credsJson.trim().length > 0) {
+    try {
+      JSON.parse(credsJson); // Validate JSON format
+      writeFileSync(resolve(authDir, "creds.json"), credsJson.trim(), "utf-8");
+      console.log(`📦 Successfully restored WhatsApp creds.json into ${authDir}`);
+      return true;
+    } catch (err: any) {
+      console.warn("⚠️ Failed to parse WHATSAPP_CREDS_JSON:", err?.message || err);
+    }
+  }
+
+  return false;
+}
+
+/**
  * Checks if WhatsApp has valid saved authentication credentials on disk.
  */
 export function isWhatsAppConfigured(): boolean {
-  return existsSync(resolve(getWhatsAppAuthDir(), "creds.json"));
+  if (existsSync(resolve(getWhatsAppAuthDir(), "creds.json"))) {
+    return true;
+  }
+  return restoreCloudWhatsAppAuth();
 }
 
 /**

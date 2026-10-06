@@ -9,6 +9,8 @@ services:
     healthCheckPath: /health
     autoDeploy: true
     envVars:
+      - key: NODE_VERSION
+        value: 22.14.0
       - key: NODE_ENV
         value: production
       - key: PORT
@@ -41,3 +43,7 @@ services:
         value: "23:00"
       - key: USER_COLLEGE_RETURN_TIME
         value: "19:30"
+      - key: WHATSAPP_AUTH_BASE64
+        sync: false
+      - key: TRELLO_ACCESS_TOKEN
+        sync: false
