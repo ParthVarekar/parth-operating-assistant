@@ -284,27 +284,38 @@ export function getDashboardHtml(): string {
   <title>Parth Varekar — Operating Assistant</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono:ital@0;1&family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono:ital@0;1&family=Instrument+Serif:ital@0;1&family=Inter+Tight:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #F8F5EE;
+      --bg: #FAF7F2;
       --bg-card: #FFFFFF;
       --bg-card-hover: #FCFAF6;
       --bg-surface: #F5F1E8;
-      --border: #E6DFD3;
-      --border-hover: #D5CCC0;
+      --bg-surface-elevated: #FAF6EF;
+      --border: #E8E2D6;
+      --border-subtle: #F0EAE0;
+      --border-hover: #D7CEBF;
       --border-accent: #C2B6A6;
-      --text: #1C1917;
-      --text-muted: #78716C;
-      --text-dim: #A8A29E;
+      --text-main: #181614;
+      --text-secondary: #57524D;
+      --text-muted: #78716A;
+      --text-dim: #A8A199;
       --emerald: #15803D;
-      --emerald-bg: rgba(21, 128, 61, 0.08);
-      --emerald-border: rgba(21, 128, 61, 0.25);
+      --emerald-bg: rgba(21, 128, 61, 0.07);
+      --emerald-border: rgba(21, 128, 61, 0.22);
       --amber: #B45309;
-      --amber-bg: rgba(180, 83, 9, 0.08);
-      --amber-border: rgba(180, 83, 9, 0.25);
-      --radius: 8px;
-      --shadow: 0 1px 3px rgba(40, 30, 20, 0.03), 0 4px 12px rgba(40, 30, 20, 0.02);
+      --amber-dark: #92400E;
+      --amber-bg: rgba(180, 83, 9, 0.07);
+      --amber-border: rgba(180, 83, 9, 0.22);
+      --indigo: #4F46E5;
+      --indigo-bg: rgba(79, 70, 229, 0.07);
+      --radius-sm: 6px;
+      --radius-md: 9px;
+      --radius-lg: 12px;
+      --shadow-sm: 0 1px 2px rgba(40, 30, 20, 0.02);
+      --shadow-card: 0 1px 3px rgba(40, 30, 20, 0.03), 0 4px 14px rgba(40, 30, 20, 0.02);
+      --shadow-hover: 0 4px 18px rgba(40, 30, 20, 0.05), 0 1px 3px rgba(40, 30, 20, 0.02);
+      --shadow-modal: 0 20px 40px -10px rgba(40, 25, 10, 0.18);
     }
 
     * {
@@ -315,16 +326,17 @@ export function getDashboardHtml(): string {
 
     body {
       background-color: var(--bg);
-      color: var(--text);
+      color: var(--text-main);
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       min-height: 100vh;
       line-height: 1.45;
       font-size: 13px;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
       background-image: 
-        radial-gradient(circle at 50% 0%, #FFFDF9 0%, #F8F5EE 85%),
-        linear-gradient(to right, rgba(140, 120, 100, 0.03) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(140, 120, 100, 0.03) 1px, transparent 1px);
+        radial-gradient(ellipse at 50% 0%, #FFFDF8 0%, #FAF7F2 80%),
+        linear-gradient(to right, rgba(140, 115, 95, 0.035) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(140, 115, 95, 0.035) 1px, transparent 1px);
       background-size: 100% 100%, 32px 32px, 32px 32px;
     }
 
@@ -345,7 +357,7 @@ export function getDashboardHtml(): string {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
       padding-bottom: 16px;
       border-bottom: 1px solid var(--border);
       flex-wrap: wrap;
@@ -354,44 +366,64 @@ export function getDashboardHtml(): string {
 
     .brand-group {
       display: flex;
-      align-items: baseline;
-      gap: 12px;
+      align-items: center;
+      gap: 14px;
       flex-wrap: wrap;
     }
 
-    .brand-title {
-      font-size: 15px;
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      background: var(--text-main);
+      color: #FAF7F2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-family: 'Inter Tight', sans-serif;
       font-weight: 700;
-      letter-spacing: 0.04em;
-      color: var(--text);
+      font-size: 13px;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-title-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .brand-title {
+      font-family: 'Inter Tight', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 7px;
     }
 
     .brand-title .serif-flair {
       font-family: 'Instrument Serif', Georgia, serif;
       font-style: italic;
-      font-size: 21px;
+      font-size: 20px;
       font-weight: 400;
-      color: #92400E;
+      color: var(--amber-dark);
+      letter-spacing: 0;
     }
 
     .brand-meta {
       font-family: 'Fragment Mono', monospace;
       font-size: 10px;
       color: var(--text-muted);
-      letter-spacing: 0.04em;
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      padding: 2px 8px;
-      border-radius: 4px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
     }
 
     .header-indicators {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
     }
 
@@ -402,11 +434,11 @@ export function getDashboardHtml(): string {
       padding: 4px 10px;
       background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       font-family: 'Fragment Mono', monospace;
-      font-size: 11px;
-      color: var(--text);
-      box-shadow: 0 1px 2px rgba(40, 30, 20, 0.02);
+      font-size: 10.5px;
+      color: var(--text-main);
+      box-shadow: var(--shadow-sm);
     }
 
     .pulse-dot {
@@ -426,11 +458,11 @@ export function getDashboardHtml(): string {
     .clock-chip {
       font-family: 'Fragment Mono', monospace;
       font-size: 11px;
-      color: #44403C;
+      color: var(--text-secondary);
       background: var(--bg-surface);
       border: 1px solid var(--border);
       padding: 4px 10px;
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       font-weight: 500;
     }
 
@@ -439,7 +471,7 @@ export function getDashboardHtml(): string {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
       flex-wrap: wrap;
       gap: 12px;
     }
@@ -453,11 +485,12 @@ export function getDashboardHtml(): string {
 
     .btn {
       background: var(--bg-card);
-      color: var(--text);
+      color: var(--text-main);
       border: 1px solid var(--border);
-      padding: 5px 12px;
-      border-radius: 6px;
-      font-size: 11.5px;
+      padding: 6px 13px;
+      border-radius: var(--radius-sm);
+      font-family: 'Inter Tight', sans-serif;
+      font-size: 12px;
       font-weight: 500;
       cursor: pointer;
       display: inline-flex;
@@ -465,19 +498,24 @@ export function getDashboardHtml(): string {
       gap: 6px;
       transition: all 0.15s ease;
       text-decoration: none;
-      box-shadow: 0 1px 2px rgba(40, 30, 20, 0.02);
+      box-shadow: var(--shadow-sm);
     }
 
     .btn:hover {
       background: var(--bg-card-hover);
       border-color: var(--border-hover);
       transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(40, 30, 20, 0.05);
+    }
+
+    .btn svg {
+      stroke: currentColor;
     }
 
     .btn-primary {
-      background: #1C1917;
+      background: var(--text-main);
       color: #FAF7F2;
-      border-color: #1C1917;
+      border-color: var(--text-main);
       font-weight: 600;
     }
 
@@ -487,27 +525,122 @@ export function getDashboardHtml(): string {
       color: #FAF7F2;
     }
 
-    /* Compact Phase Banner */
+    /* ScaleStudio / Framo Reference Metric KPI Strip */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    @media (max-width: 900px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 540px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.15s ease;
+    }
+
+    .kpi-card:hover {
+      border-color: var(--border-hover);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .kpi-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .kpi-label {
+      font-family: 'Fragment Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .kpi-badge {
+      font-family: 'Fragment Mono', monospace;
+      font-size: 9.5px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+    }
+
+    .kpi-val {
+      font-family: 'Inter Tight', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text-main);
+      line-height: 1.15;
+      margin-bottom: 4px;
+    }
+
+    .kpi-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Active Routine Phase Banner */
     .phase-banner {
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-left: 3px solid var(--amber);
-      border-radius: var(--radius);
+      border-radius: var(--radius-md);
       padding: 10px 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
-      box-shadow: var(--shadow);
+      margin-bottom: 18px;
+      box-shadow: var(--shadow-card);
+      gap: 12px;
+    }
+
+    .phase-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .phase-icon-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--amber-bg);
+      border: 1px solid var(--amber-border);
+      color: var(--amber-dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
     }
 
     .phase-title {
-      font-size: 13px;
+      font-family: 'Inter Tight', sans-serif;
+      font-size: 13.5px;
       font-weight: 600;
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      letter-spacing: -0.01em;
+      color: var(--text-main);
     }
 
     .phase-desc {
@@ -537,12 +670,12 @@ export function getDashboardHtml(): string {
     .card {
       background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
+      border-radius: var(--radius-md);
       padding: 16px 18px;
       display: flex;
       flex-direction: column;
-      box-shadow: var(--shadow);
-      transition: border-color 0.15s ease;
+      box-shadow: var(--shadow-card);
+      transition: all 0.15s ease;
     }
 
     .card:hover {
@@ -555,29 +688,33 @@ export function getDashboardHtml(): string {
       align-items: center;
       padding-bottom: 10px;
       margin-bottom: 12px;
-      border-bottom: 1px solid #F0EAE1;
+      border-bottom: 1px solid var(--border-subtle);
     }
 
     .card-title {
-      font-size: 11.5px;
+      font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.05em;
       color: var(--text-muted);
       font-family: 'Fragment Mono', monospace;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 7px;
+    }
+
+    .card-title svg {
+      stroke: var(--text-secondary);
     }
 
     .card-badge {
       font-family: 'Fragment Mono', monospace;
       font-size: 10px;
-      padding: 2px 6px;
+      padding: 2px 7px;
       border-radius: 4px;
       background: var(--bg-surface);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
     }
 
     /* Height Lock Classes for Crisp Alignment */
@@ -596,9 +733,9 @@ export function getDashboardHtml(): string {
     }
 
     .timeline-row {
-      background: #FAF8F5;
+      background: var(--bg-surface-elevated);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       padding: 8px 12px;
       display: flex;
       align-items: center;
@@ -616,13 +753,15 @@ export function getDashboardHtml(): string {
       font-family: 'Fragment Mono', monospace;
       font-size: 11px;
       font-weight: 600;
-      color: #92400E;
-      min-width: 86px;
+      color: var(--amber-dark);
+      min-width: 90px;
     }
 
     .time-title {
-      font-size: 12px;
+      font-family: 'Inter Tight', sans-serif;
+      font-size: 12.5px;
       font-weight: 500;
+      color: var(--text-main);
       flex: 1;
       white-space: nowrap;
       overflow: hidden;
@@ -655,19 +794,19 @@ export function getDashboardHtml(): string {
     }
 
     .meter-item {
-      margin-bottom: 12px;
+      margin-bottom: 11px;
     }
 
     .meter-label {
       display: flex;
       justify-content: space-between;
       font-size: 11px;
-      margin-bottom: 4px;
+      margin-bottom: 5px;
       font-family: 'Fragment Mono', monospace;
     }
 
     .meter-track {
-      height: 7px;
+      height: 6px;
       background: #EAE3D7;
       border-radius: 9999px;
       overflow: hidden;
@@ -695,13 +834,13 @@ export function getDashboardHtml(): string {
     }
 
     .preset-chip {
-      background: #FAF8F5;
+      background: var(--bg-surface-elevated);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 6px 8px;
+      border-radius: var(--radius-sm);
+      padding: 6px 9px;
       text-align: left;
       cursor: pointer;
-      color: var(--text);
+      color: var(--text-main);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -711,10 +850,12 @@ export function getDashboardHtml(): string {
     .preset-chip:hover {
       background: #FFFFFF;
       border-color: var(--border-hover);
+      transform: translateY(-1px);
     }
 
     .preset-chip .p-name {
-      font-size: 11px;
+      font-family: 'Inter Tight', sans-serif;
+      font-size: 11.5px;
       font-weight: 500;
     }
 
@@ -738,17 +879,17 @@ export function getDashboardHtml(): string {
     .checklist-row {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 7px;
       font-size: 11.5px;
-      color: var(--text);
-      margin-bottom: 3px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
     }
 
     /* Hackathons */
     .hackathon-row {
-      background: #FAF8F5;
+      background: var(--bg-surface-elevated);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       padding: 7px 10px;
       display: flex;
       justify-content: space-between;
@@ -764,8 +905,10 @@ export function getDashboardHtml(): string {
     }
 
     .hack-name {
+      font-family: 'Inter Tight', sans-serif;
       font-size: 12px;
-      font-weight: 500;
+      font-weight: 600;
+      color: var(--text-main);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -780,9 +923,9 @@ export function getDashboardHtml(): string {
 
     /* Hubs */
     .hub-row {
-      background: #FAF8F5;
+      background: var(--bg-surface-elevated);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       padding: 6px 10px;
       display: flex;
       justify-content: space-between;
@@ -791,11 +934,14 @@ export function getDashboardHtml(): string {
     }
 
     .hub-title {
+      font-family: 'Inter Tight', sans-serif;
       font-size: 12px;
-      font-weight: 500;
+      font-weight: 600;
+      color: var(--text-main);
     }
 
     .hub-sub {
+      font-family: 'Fragment Mono', monospace;
       font-size: 10px;
       color: var(--text-muted);
     }
@@ -824,23 +970,25 @@ export function getDashboardHtml(): string {
       cursor: pointer;
       color: var(--text-muted);
       font-family: 'Fragment Mono', monospace;
+      transition: all 0.1s ease;
     }
 
     .filter-tab.active {
       background: var(--bg-surface);
       border-color: var(--border);
-      color: var(--text);
+      color: var(--text-main);
       font-weight: 600;
     }
 
     .task-search-input {
-      background: #FAF8F5;
+      background: var(--bg-surface-elevated);
       border: 1px solid var(--border);
       border-radius: 4px;
       padding: 3px 8px;
       font-size: 11px;
-      color: var(--text);
+      color: var(--text-main);
       width: 140px;
+      font-family: 'Inter', sans-serif;
     }
 
     .task-search-input:focus {
@@ -850,9 +998,9 @@ export function getDashboardHtml(): string {
     }
 
     .task-row {
-      background: #FAF8F5;
+      background: var(--bg-surface-elevated);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       padding: 6px 10px;
       display: flex;
       justify-content: space-between;
@@ -888,8 +1036,10 @@ export function getDashboardHtml(): string {
     .pri-low    { background: #9CA3AF; }
 
     .task-name {
-      font-size: 12px;
+      font-family: 'Inter Tight', sans-serif;
+      font-size: 12.5px;
       font-weight: 500;
+      color: var(--text-main);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -908,7 +1058,7 @@ export function getDashboardHtml(): string {
       justify-content: space-between;
       align-items: center;
       padding: 6px 0;
-      border-bottom: 1px solid #F0EAE1;
+      border-bottom: 1px solid var(--border-subtle);
       font-family: 'Fragment Mono', monospace;
       font-size: 11px;
     }
@@ -923,15 +1073,15 @@ export function getDashboardHtml(): string {
 
     .telemetry-val {
       font-weight: 500;
-      color: var(--text);
+      color: var(--text-main);
     }
 
     /* Modal Form */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(40, 30, 20, 0.4);
-      backdrop-filter: blur(4px);
+      background: rgba(30, 24, 18, 0.45);
+      backdrop-filter: blur(6px);
       display: none;
       align-items: center;
       justify-content: center;
@@ -941,20 +1091,22 @@ export function getDashboardHtml(): string {
     .modal {
       background: #FFFFFF;
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: var(--radius-lg);
       width: 90%;
       max-width: 440px;
       padding: 22px;
-      box-shadow: 0 16px 36px -8px rgba(40, 25, 10, 0.15);
+      box-shadow: var(--shadow-modal);
     }
 
     .modal-title {
-      font-size: 14px;
-      font-weight: 600;
+      font-family: 'Inter Tight', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
       margin-bottom: 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      color: var(--text-main);
     }
 
     .form-group {
@@ -963,20 +1115,23 @@ export function getDashboardHtml(): string {
 
     .form-label {
       display: block;
-      font-size: 11px;
+      font-size: 10.5px;
       color: var(--text-muted);
       margin-bottom: 4px;
       font-family: 'Fragment Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
 
     .form-input, .form-select {
       width: 100%;
-      background: #FAF8F5;
+      background: var(--bg-surface-elevated);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       padding: 7px 10px;
-      color: var(--text);
+      color: var(--text-main);
       font-size: 12.5px;
+      font-family: 'Inter', sans-serif;
     }
 
     .form-input:focus, .form-select:focus {
@@ -996,11 +1151,11 @@ export function getDashboardHtml(): string {
       position: fixed;
       bottom: 20px;
       right: 20px;
-      background: #1C1917;
+      background: var(--text-main);
       color: #FAF7F2;
       border: 1px solid #44403C;
       padding: 8px 14px;
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       font-size: 11.5px;
       font-family: 'Fragment Mono', monospace;
       display: none;
@@ -1014,16 +1169,19 @@ export function getDashboardHtml(): string {
     <!-- Header -->
     <header>
       <div class="brand-group">
-        <div class="brand-title">
-          <span>PARTH.OS</span>
-          <span class="serif-flair">Operating Assistant</span>
+        <div class="brand-mark">P</div>
+        <div class="brand-title-wrap">
+          <div class="brand-title">
+            <span>PARTH.OS</span>
+            <span class="serif-flair">Operating Assistant</span>
+          </div>
+          <div class="brand-meta">K.C. COLLEGE OF ENGINEERING • THANE (MUMBAI)</div>
         </div>
-        <div class="brand-meta">K.C. COLLEGE OF ENGINEERING • THANE</div>
       </div>
       <div class="header-indicators">
         <div class="chip">
           <div class="pulse-dot"></div>
-          <span>CLOUD DAEMON ACTIVE</span>
+          <span>LIVE DAEMON ACTIVE</span>
         </div>
         <div class="clock-chip" id="clock-display">--:--:-- IST</div>
       </div>
@@ -1032,10 +1190,22 @@ export function getDashboardHtml(): string {
     <!-- Controls Ribbon -->
     <div class="action-bar">
       <div class="btn-group">
-        <button class="btn btn-primary" onclick="openTaskModal()">+ Add Coursework</button>
-        <button class="btn" onclick="triggerReplan()">⚡ Replan Night</button>
-        <button class="btn" onclick="openCustomMealModal()">🍱 Log Meal</button>
-        <button class="btn" onclick="refreshDashboard(true)">🔄 Sync State</button>
+        <button class="btn btn-primary" onclick="openTaskModal()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Add Coursework
+        </button>
+        <button class="btn" onclick="triggerReplan()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          Replan Night
+        </button>
+        <button class="btn" onclick="openCustomMealModal()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          Log Nutrition
+        </button>
+        <button class="btn" onclick="refreshDashboard(true)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          Sync State
+        </button>
       </div>
       <div class="btn-group">
         <a href="/api/dashboard-data" target="_blank" class="btn">JSON API</a>
@@ -1043,13 +1213,52 @@ export function getDashboardHtml(): string {
       </div>
     </div>
 
+    <!-- ScaleStudio Inspired Metric KPI Strip -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">DEEP WORK FOCUS</span>
+          <span class="kpi-badge">11PM – 4:30AM</span>
+        </div>
+        <div class="kpi-val">5h 30m</div>
+        <div class="kpi-sub">Peak cognitive sprint window</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">DAILY PROTEIN</span>
+          <span class="kpi-badge" id="kpi-protein-badge">0% Goal</span>
+        </div>
+        <div class="kpi-val" id="kpi-protein">0 / 130g</div>
+        <div class="kpi-sub" id="kpi-calories">0 / 2500 kcal • Fuel target</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">ACADEMIC BACKLOG</span>
+          <span class="kpi-badge" id="kpi-tasks-badge">0 Pending</span>
+        </div>
+        <div class="kpi-val" id="kpi-tasks">0 Items</div>
+        <div class="kpi-sub">KCCEMSR practical turns & lab sheets</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">REGIONAL CIRCUIT</span>
+          <span class="kpi-badge">MUMBAI / PUNE</span>
+        </div>
+        <div class="kpi-val" id="kpi-hacks">10 Active</div>
+        <div class="kpi-sub">Curated hackathons & prize pools</div>
+      </div>
+    </div>
+
     <!-- Active Routine Phase Banner -->
     <div class="phase-banner" id="phase-banner">
-      <div class="phase-title">
-        <span id="phase-icon">🌙</span>
-        <span id="phase-title-text">Loading Protocol...</span>
+      <div class="phase-left">
+        <div class="phase-icon-badge" id="phase-icon">🌙</div>
+        <div>
+          <div class="phase-title" id="phase-title-text">Loading Protocol...</div>
+          <div class="phase-desc" id="phase-desc">Determining active routine window...</div>
+        </div>
       </div>
-      <div class="phase-desc" id="phase-desc">Determining active routine window...</div>
+      <span class="card-badge" style="background:#FFFFFF;">IST PROTOCOL</span>
     </div>
 
     <!-- Bento Grid -->
@@ -1058,26 +1267,30 @@ export function getDashboardHtml(): string {
       <div class="card col-7 fixed-tier-1">
         <div class="card-header">
           <div class="card-title">
-            <span>🌙 Deep Work Sprint</span>
-            <span style="font-family:'Instrument Serif',serif;font-style:italic;font-size:15px;color:#92400E;text-transform:none;">(11:00 PM – 4:30 AM)</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            <span>Deep Work Timeline</span>
+            <span style="font-family:'Instrument Serif',serif;font-style:italic;font-size:15px;color:var(--amber-dark);text-transform:none;letter-spacing:0;">(11:00 PM – 4:30 AM)</span>
           </div>
           <div class="card-badge" id="blocks-count">0 Blocks</div>
         </div>
         <div class="timeline-list scroll-box" id="schedule-list">
-          <div style="color:var(--text-muted);font-size:12px;padding:12px;text-align:center;">No timeline blocks scheduled. Tap "⚡ Replan Night" to pack your coursework.</div>
+          <div style="color:var(--text-muted);font-size:12px;padding:12px;text-align:center;">No timeline blocks scheduled. Tap "Replan Night" to pack your coursework.</div>
         </div>
       </div>
 
       <div class="card col-5 fixed-tier-1">
         <div class="card-header">
-          <div class="card-title">🏋️ Macro & Gym Engine</div>
+          <div class="card-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 5v14M18 5v14M2 9v6M22 9v6M6 12h12"/></svg>
+            <span>Macro & Gym Engine</span>
+          </div>
           <div class="card-badge">Target: 130g P • 2500 kcal</div>
         </div>
         <div class="fitness-container">
           <div>
             <div class="meter-item">
               <div class="meter-label">
-                <span style="color:var(--text-muted);">PROTEIN</span>
+                <span style="color:var(--text-muted);">PROTEIN PROGRESS</span>
                 <span id="protein-val" style="font-weight:600;">0 / 130g (0%)</span>
               </div>
               <div class="meter-track">
@@ -1087,7 +1300,7 @@ export function getDashboardHtml(): string {
 
             <div class="meter-item">
               <div class="meter-label">
-                <span style="color:var(--text-muted);">CALORIES</span>
+                <span style="color:var(--text-muted);">ENERGY CALORIES</span>
                 <span id="calories-val" style="font-weight:600;">0 / 2500 kcal (0%)</span>
               </div>
               <div class="meter-track">
@@ -1123,7 +1336,10 @@ export function getDashboardHtml(): string {
       <!-- Row 2: Print Bundler (Col 4) + Hackathons (Col 4) + Ecosystem (Col 4) -->
       <div class="card col-4 fixed-tier-2">
         <div class="card-header">
-          <div class="card-title">🖨️ Physical Xerox & Bag</div>
+          <div class="card-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            <span>Physical Xerox & Bag</span>
+          </div>
           <div class="card-badge" id="print-count">0 Turns</div>
         </div>
         <div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;">
@@ -1139,7 +1355,10 @@ export function getDashboardHtml(): string {
 
       <div class="card col-4 fixed-tier-2">
         <div class="card-header">
-          <div class="card-title">🏆 Regional Hackathons</div>
+          <div class="card-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.45 1-1 1H7v4h10v-4h-2c-.55 0-1-.45-1-1v-2.34"></path><path d="M6 4h12v7a6 6 0 0 1-12 0V4z"></path></svg>
+            <span>Regional Hackathons</span>
+          </div>
           <div class="card-badge">Mumbai / Thane / Pune</div>
         </div>
         <div class="scroll-box" id="hackathon-list" style="flex:1;overflow-y:auto;">
@@ -1149,14 +1368,17 @@ export function getDashboardHtml(): string {
 
       <div class="card col-4 fixed-tier-2">
         <div class="card-header">
-          <div class="card-title">🌐 Connected Ecosystem</div>
+          <div class="card-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+            <span>Connected Ecosystem</span>
+          </div>
           <div class="card-badge">Permanent Bridge</div>
         </div>
         <div class="scroll-box" style="flex:1;overflow-y:auto;">
           <div class="hub-row">
             <div>
               <div class="hub-title">WhatsApp Academic Bridge</div>
-              <div class="hub-sub">Strict Read-Only Mode (Guaranteed)</div>
+              <div class="hub-sub">Strict Read-Only Guard (Active)</div>
             </div>
             <span class="status-tag completed" id="hub-wa-tag">ACTIVE</span>
           </div>
@@ -1170,7 +1392,7 @@ export function getDashboardHtml(): string {
           <div class="hub-row">
             <div>
               <div class="hub-title">Telegram Bot Gateway</div>
-              <div class="hub-sub">@parth_assistant_bot Long Polling</div>
+              <div class="hub-sub">@parth_assistant_bot Polling</div>
             </div>
             <span class="status-tag completed">ACTIVE</span>
           </div>
@@ -1194,7 +1416,10 @@ export function getDashboardHtml(): string {
       <!-- Row 3: Task Manager (Col 8) + Cloud Telemetry (Col 4) -->
       <div class="card col-8 fixed-tier-3">
         <div class="card-header" style="margin-bottom:8px;padding-bottom:8px;">
-          <div class="card-title">📋 Coursework & Task Backlog</div>
+          <div class="card-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+            <span>Coursework & Task Backlog</span>
+          </div>
           <div class="card-badge" id="tasks-count">0 Tasks</div>
         </div>
         <div class="task-controls">
@@ -1213,7 +1438,10 @@ export function getDashboardHtml(): string {
 
       <div class="card col-4 fixed-tier-3">
         <div class="card-header" style="margin-bottom:8px;padding-bottom:8px;">
-          <div class="card-title">☁️ Render Telemetry</div>
+          <div class="card-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+            <span>Render Telemetry</span>
+          </div>
           <div class="card-badge">Zero-Downtime</div>
         </div>
         <div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;">
@@ -1243,7 +1471,7 @@ export function getDashboardHtml(): string {
               <span class="telemetry-val" id="sys-uptime">-</span>
             </div>
           </div>
-          <div style="padding-top:10px;border-top:1px solid #F0EAE1;display:flex;justify-content:space-between;align-items:center;">
+          <div style="padding-top:10px;border-top:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center;">
             <span style="font-size:11px;color:var(--text-muted);font-family:'Fragment Mono',monospace;">STATUS: HEALTHY</span>
             <button class="btn" style="padding:3px 8px;font-size:10.5px;" onclick="refreshDashboard(true)">Ping Telemetry</button>
           </div>
@@ -1423,7 +1651,7 @@ export function getDashboardHtml(): string {
       const sContainer = document.getElementById('schedule-list');
       document.getElementById('blocks-count').innerText = data.schedule.blocksCount + ' Blocks';
       if (data.schedule.blocks.length === 0) {
-        sContainer.innerHTML = '<div style="color:var(--text-muted);font-size:11.5px;padding:12px;text-align:center;">No blocks active. Tap "⚡ Replan Night" above.</div>';
+        sContainer.innerHTML = '<div style="color:var(--text-muted);font-size:11.5px;padding:12px;text-align:center;">No blocks active. Tap "Replan Night" above.</div>';
       } else {
         sContainer.innerHTML = data.schedule.blocks.map(b => {
           const isDone = b.status === 'completed';
@@ -1446,6 +1674,22 @@ export function getDashboardHtml(): string {
       document.getElementById('calories-val').innerText = c.current + ' / ' + c.target + ' kcal (' + c.percent + '%)';
       document.getElementById('calories-bar').style.width = c.percent + '%';
 
+      // ScaleStudio KPI Strip updates
+      const kpiProt = document.getElementById('kpi-protein');
+      if (kpiProt) kpiProt.innerText = p.current + ' / ' + p.target + 'g';
+      const kpiProtBadge = document.getElementById('kpi-protein-badge');
+      if (kpiProtBadge) kpiProtBadge.innerText = p.percent + '% P';
+      const kpiCal = document.getElementById('kpi-calories');
+      if (kpiCal) kpiCal.innerText = c.current + ' / ' + c.target + ' kcal • Fuel target';
+
+      const kpiTasks = document.getElementById('kpi-tasks');
+      if (kpiTasks) kpiTasks.innerText = data.tasks.totalPending + ' Items';
+      const kpiTasksBadge = document.getElementById('kpi-tasks-badge');
+      if (kpiTasksBadge) kpiTasksBadge.innerText = data.tasks.totalPending + ' Pending';
+
+      const kpiHacks = document.getElementById('kpi-hacks');
+      if (kpiHacks) kpiHacks.innerText = data.hackathons.total + ' Active';
+
       // Print Queue
       document.getElementById('print-count').innerText = data.printQueue.totalItems + ' Turns';
       const printContainer = document.getElementById('print-list');
@@ -1453,7 +1697,7 @@ export function getDashboardHtml(): string {
         printContainer.innerHTML = '<div style="font-size:11px;color:var(--emerald);">✓ All coursework printed & submitted.</div>';
       } else {
         printContainer.innerHTML = data.printQueue.items.map(p => {
-          return '<div style="background:#FAF8F5;border:1px solid var(--border);border-radius:4px;padding:5px 8px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">' +
+          return '<div style="background:var(--bg-surface-elevated);border:1px solid var(--border);border-radius:4px;padding:5px 8px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">' +
             '<div style="font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px;">' + p.title + '</div>' +
             '<span class="card-badge">' + p.estimatedPages + ' pgs</span>' +
           '</div>';
