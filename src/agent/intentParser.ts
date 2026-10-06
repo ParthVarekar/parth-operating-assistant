@@ -87,7 +87,17 @@ function parseFallbackHeuristics(text: string): ParsedIntent {
   }
 
   // Check for meal logging
-  if (lower.includes("dinner") || lower.includes("ate") || lower.includes("meal") || lower.includes("lunch")) {
+  if (
+    lower.includes("dinner") ||
+    lower.includes("ate") ||
+    lower.includes("meal") ||
+    lower.includes("lunch") ||
+    lower.includes("breakfast") ||
+    lower.includes("eggs") ||
+    lower.includes("protein") ||
+    lower.includes("shake") ||
+    lower.includes("whey")
+  ) {
     return {
       intentType: "LOG_MEAL",
       responseMessage: "Meal recorded. Keeping your nutrition on track.",
@@ -104,11 +114,15 @@ function parseFallbackHeuristics(text: string): ParsedIntent {
     estimated = unit.startsWith("h") ? val * 60 : val;
   }
 
+  const subjectMatch = text.match(/(?:for|in)\s+([A-Za-z0-9\s]+?)(?:\s+(?:due|by|before|on|needs|need|next)|$)/i);
+  const subject = subjectMatch ? subjectMatch[1]?.trim() : undefined;
+
   return {
     intentType: isSubmission ? "CREATE_SUBMISSION" : "CREATE_TASK",
     taskTitle: text.slice(0, 60),
     estimatedMinutes: estimated,
     category: isSubmission ? "assignment" : "coding",
+    subject,
     isPrintable: lower.includes("print") || lower.includes("handwritten"),
     responseMessage: `Added "${text.slice(0, 30)}..." to your active queue.`,
   };

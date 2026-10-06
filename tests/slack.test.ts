@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { initDatabase } from "../src/db/database.js";
 import {
   broadcastPlanToSlack,
@@ -14,6 +14,10 @@ describe("Slack Workspace Integration Suite", () => {
   beforeAll(() => {
     process.env.DATABASE_PATH = ":memory:";
     initDatabase(":memory:");
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("handles unconfigured state with setup instructions", () => {
@@ -38,17 +42,29 @@ describe("Slack Workspace Integration Suite", () => {
   });
 
   it("handles notification delivery failure gracefully without crashing", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Network connection refused"));
+
     const res = await sendSlackNotification({
       title: "Test",
       text: "Test body",
     });
-    expect(typeof res).toBe("boolean");
+    expect(res).toBe(false);
 
     const planRes = await broadcastPlanToSlack("1. Task A\n2. Task B", 2);
-    expect(typeof planRes).toBe("boolean");
+    expect(planRes).toBe(false);
 
     const taskRes = await broadcastTaskDoneToSlack("Task X", "study", 30);
-    expect(typeof taskRes).toBe("boolean");
+    expect(taskRes).toBe(false);
+  });
+
+  it("handles successful notification delivery", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("ok", { status: 200 }));
+
+    const res = await sendSlackNotification({
+      title: "Test Success",
+      text: "All clear",
+    });
+    expect(res).toBe(true);
   });
 
   it("clears Slack configuration cleanly", () => {

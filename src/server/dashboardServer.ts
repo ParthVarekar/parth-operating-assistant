@@ -28,6 +28,7 @@ import { getDiscordWebhookUrl } from "../services/discordService.js";
 import { getActiveGitHubUsername } from "../services/githubService.js";
 import { getTrelloAccessToken } from "../services/trelloService.js";
 import { getUserProfile } from "../db/repositories/habitRepository.js";
+import { processAssistantChat, getChatHistory } from "../agent/chatHandler.js";
 import type { Task, BlockStatus, CityZone } from "../types/index.js";
 
 const startTimeEpoch = Date.now();
@@ -1162,6 +1163,172 @@ export function getDashboardHtml(): string {
       z-index: 2000;
       box-shadow: 0 8px 20px rgba(0,0,0,0.2);
     }
+
+    /* Floating Chat Action Button */
+    .chat-fab {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--text-main);
+      color: #FAF7F2;
+      border: 1px solid var(--border-accent);
+      border-radius: 9999px;
+      padding: 10px 18px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Inter Tight', sans-serif;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(25, 20, 15, 0.22);
+      z-index: 2100;
+      transition: all 0.15s ease;
+    }
+    .chat-fab:hover {
+      transform: translateY(-2px);
+      background: #2E2A27;
+      box-shadow: 0 8px 24px rgba(25, 20, 15, 0.28);
+    }
+    .chat-fab svg {
+      stroke: currentColor;
+    }
+
+    /* Sliding Chat Drawer */
+    .chat-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(30, 24, 18, 0.4);
+      backdrop-filter: blur(4px);
+      display: none;
+      z-index: 2400;
+    }
+    .chat-backdrop.open {
+      display: block;
+    }
+
+    .chat-drawer {
+      position: fixed;
+      right: -440px;
+      top: 0;
+      bottom: 0;
+      width: 420px;
+      max-width: 92vw;
+      background: #FFFFFF;
+      border-left: 1px solid var(--border);
+      box-shadow: -10px 0 35px rgba(40, 30, 20, 0.12);
+      z-index: 2500;
+      display: flex;
+      flex-direction: column;
+      transition: right 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .chat-drawer.open {
+      right: 0;
+    }
+
+    .chat-drawer-header {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-surface-elevated);
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .chat-bubble {
+      max-width: 86%;
+      padding: 9px 13px;
+      font-size: 12.5px;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: var(--text-main);
+      color: #FAF7F2;
+      border-radius: 12px 12px 2px 12px;
+    }
+
+    .chat-bubble.assistant {
+      align-self: flex-start;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 12px 12px 12px 2px;
+    }
+
+    .chat-bubble.system {
+      align-self: center;
+      width: 100%;
+      background: var(--amber-bg);
+      border: 1px solid var(--amber-border);
+      color: var(--amber-dark);
+      border-radius: 8px;
+      font-family: 'Fragment Mono', monospace;
+      font-size: 11px;
+      padding: 7px 10px;
+    }
+
+    .chat-quick-chips {
+      padding: 8px 14px;
+      border-top: 1px solid var(--border-subtle);
+      background: #FAF8F5;
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+
+    .quick-chip {
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      padding: 3px 9px;
+      font-size: 11px;
+      color: var(--text-main);
+      cursor: pointer;
+      font-family: 'Inter Tight', sans-serif;
+      transition: all 0.1s ease;
+      flex-shrink: 0;
+    }
+    .quick-chip:hover {
+      background: var(--bg-surface);
+      border-color: var(--border-hover);
+    }
+
+    .chat-input-bar {
+      padding: 12px 14px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      background: #FFFFFF;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 7px 11px;
+      font-size: 12.5px;
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+    }
+    .chat-input:focus {
+      outline: none;
+      border-color: #A8A29E;
+      background: #FFFFFF;
+    }
   </style>
 </head>
 <body>
@@ -1193,6 +1360,10 @@ export function getDashboardHtml(): string {
         <button class="btn btn-primary" onclick="openTaskModal()">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           Add Coursework
+        </button>
+        <button class="btn" style="background:#FAF6EF;border-color:var(--amber-border);color:var(--amber-dark);font-weight:600;" onclick="toggleChatDrawer()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          Chat with Assistant
         </button>
         <button class="btn" onclick="triggerReplan()">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
@@ -1551,11 +1722,130 @@ export function getDashboardHtml(): string {
     </div>
   </div>
 
+  <!-- Floating Chat Action Button -->
+  <button class="chat-fab" onclick="toggleChatDrawer()">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+    <span>Chat with AI</span>
+  </button>
+
+  <!-- Sliding Chat Backdrop & Drawer -->
+  <div class="chat-backdrop" id="chat-backdrop" onclick="toggleChatDrawer()"></div>
+  <div class="chat-drawer" id="chat-drawer">
+    <div class="chat-drawer-header">
+      <div style="display:flex;align-items:center;gap:9px;">
+        <div class="pulse-dot"></div>
+        <div>
+          <div style="font-family:'Inter Tight',sans-serif;font-weight:700;font-size:14px;color:var(--text-main);">PARTH.OS Assistant Brain</div>
+          <div style="font-family:'Fragment Mono',monospace;font-size:10px;color:var(--text-muted);">24/7 CLOUD REASONING ENGINE</div>
+        </div>
+      </div>
+      <button class="btn" style="padding:2px 8px;font-size:11px;" onclick="toggleChatDrawer()">✕</button>
+    </div>
+    <div class="chat-messages scroll-box" id="chat-messages">
+      <div class="chat-bubble assistant">
+        👋 Hi Parth! I'm your Personal Operating Assistant. You can chat with me here, update tasks, check your timetable, log macros, or ask about hackathons.
+      </div>
+    </div>
+    <div class="chat-quick-chips">
+      <button class="quick-chip" onclick="sendQuickPrompt('What should I do next?')">What's next?</button>
+      <button class="quick-chip" onclick="sendQuickPrompt('Replan night schedule')">⚡ Replan</button>
+      <button class="quick-chip" onclick="sendQuickPrompt('Log Whey Shake')">🥤 Whey Shake</button>
+      <button class="quick-chip" onclick="sendQuickPrompt('Show upcoming hackathons')">🏆 Hackathons</button>
+      <button class="quick-chip" onclick="sendQuickPrompt('What lab prints are pending?')">🖨️ Prints</button>
+    </div>
+    <form class="chat-input-bar" onsubmit="submitChatMessage(event)">
+      <input type="text" id="chat-input" class="chat-input" placeholder="Type message, add task, replan, log food..." autocomplete="off" />
+      <button type="submit" class="btn btn-primary" style="padding:6px 14px;" id="chat-send-btn">Send</button>
+    </form>
+  </div>
+
   <div id="toast"></div>
 
   <script>
     let allTasks = [];
     let currentTaskFilter = 'all';
+    let isChatOpen = false;
+
+    function toggleChatDrawer() {
+      isChatOpen = !isChatOpen;
+      document.getElementById('chat-drawer').classList.toggle('open', isChatOpen);
+      document.getElementById('chat-backdrop').classList.toggle('open', isChatOpen);
+      if (isChatOpen) {
+        document.getElementById('chat-input').focus();
+        loadChatHistory();
+      }
+    }
+
+    async function loadChatHistory() {
+      try {
+        const res = await fetch('/api/chat/history');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.history) renderChatHistory(data.history);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderChatHistory(history) {
+      const container = document.getElementById('chat-messages');
+      if (!container) return;
+      container.innerHTML = history.map(m => {
+        const roleClass = m.role === 'user' ? 'user' : (m.role === 'system' ? 'system' : 'assistant');
+        return '<div class="chat-bubble ' + roleClass + '">' +
+          m.text.replace(/\\n/g, '<br/>') +
+        '</div>';
+      }).join('');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    async function submitChatMessage(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      input.value = '';
+      const sendBtn = document.getElementById('chat-send-btn');
+      sendBtn.disabled = true;
+      sendBtn.innerText = '...';
+
+      // Optimistic append
+      const container = document.getElementById('chat-messages');
+      container.innerHTML += '<div class="chat-bubble user">' + text + '</div>';
+      container.scrollTop = container.scrollHeight;
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.history) {
+            renderChatHistory(data.history);
+          } else if (data.reply) {
+            container.innerHTML += '<div class="chat-bubble assistant">' + data.reply.replace(/\\n/g, '<br/>') + '</div>';
+            container.scrollTop = container.scrollHeight;
+          }
+          if (data.actionsTaken && data.actionsTaken.length > 0) {
+            showToast(data.actionsTaken[0]);
+          }
+          refreshDashboard();
+        }
+      } catch (err) {
+        container.innerHTML += '<div class="chat-bubble system">Error communicating with assistant brain.</div>';
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.innerText = 'Send';
+      }
+    }
+
+    function sendQuickPrompt(promptText) {
+      document.getElementById('chat-input').value = promptText;
+      submitChatMessage();
+    }
 
     function showToast(msg) {
       const t = document.getElementById('toast');
@@ -1579,6 +1869,7 @@ export function getDashboardHtml(): string {
     function closeModals() {
       document.getElementById('task-modal').style.display = 'none';
       document.getElementById('meal-modal').style.display = 'none';
+      if (isChatOpen) toggleChatDrawer();
     }
 
     function openTaskModal() {
@@ -2058,6 +2349,30 @@ export function startDashboardServer(customPort?: number): http.Server {
         const isBookmarked = toggleBookmark(hackId);
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ success: true, hackId, isBookmarked }));
+        return;
+      }
+
+      // 11. Assistant Chat API (Process message)
+      if (pathname === "/api/chat" && req.method === "POST") {
+        const body = await parseJsonBody<any>(req);
+        if (!body.message || typeof body.message !== "string") {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Message is required" }));
+          return;
+        }
+
+        const result = await processAssistantChat(body.message, "dashboard");
+        const history = getChatHistory();
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true, reply: result.reply, actionsTaken: result.actionsTaken, history }));
+        return;
+      }
+
+      // 12. Assistant Chat History API
+      if (pathname === "/api/chat/history" && req.method === "GET") {
+        const history = getChatHistory();
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true, history }));
         return;
       }
 

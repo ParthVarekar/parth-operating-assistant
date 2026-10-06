@@ -2,6 +2,7 @@ import { initDatabase } from "./db/database.js";
 import { getEnv } from "./config/env.js";
 import { createTelegramBot } from "./telegram/bot.js";
 import { startHeartbeat, stopHeartbeat } from "./scheduler/eventHeartbeat.js";
+import { startAutonomousHeartbeat, stopAutonomousHeartbeat } from "./scheduler/autonomousHeartbeat.js";
 import {
   isWhatsAppConfigured,
   startWhatsAppClient,
@@ -33,10 +34,11 @@ async function main() {
   console.log("🌐 Starting Hanzo Web Dashboard & REST API Server...");
   startDashboardServer();
 
-  // 2. Start Proactive Event Heartbeat
-  console.log("⏱️ Starting proactive scheduler heartbeat (15s tick)...");
+  // 2. Start Proactive Event Heartbeat & Autonomous Multi-Cadence Ingestion
+  console.log("⏱️ Starting proactive scheduler heartbeat & autonomous engine...");
   startHeartbeat(15000);
-  console.log("✅ Scheduler heartbeat active.");
+  startAutonomousHeartbeat(30000);
+  console.log("✅ Scheduler heartbeat & Autonomous Ingestion Engine active.");
 
   // 2.5 Start WhatsApp background listener if linked
   if (isWhatsAppConfigured()) {
@@ -71,6 +73,7 @@ process.on("SIGINT", async () => {
   console.log("\n🛑 Received SIGINT. Shutting down gracefully...");
   await stopDashboardServer();
   stopHeartbeat();
+  stopAutonomousHeartbeat();
   stopWhatsAppClient();
   stopDiscordBot();
   process.exit(0);
@@ -80,9 +83,19 @@ process.on("SIGTERM", async () => {
   console.log("\n🛑 Received SIGTERM. Shutting down gracefully...");
   await stopDashboardServer();
   stopHeartbeat();
+  stopAutonomousHeartbeat();
   stopWhatsAppClient();
   stopDiscordBot();
   process.exit(0);
+});
+
+// 24/7 Cloud Resilience Guards: prevent Baileys connection reconnect timeouts from exiting process
+process.on("unhandledRejection", (reason) => {
+  console.warn("⚠️ Process caught unhandledRejection (prevented daemon crash):", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("⚠️ Process caught uncaughtException (prevented daemon crash):", error);
 });
 
 main().catch((err) => {

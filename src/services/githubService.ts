@@ -86,6 +86,7 @@ export async function fetchGitHubUser(username?: string): Promise<{
   try {
     const res = await fetch(`https://api.github.com/users/${targetUser}`, {
       headers: getHeaders(),
+      signal: AbortSignal.timeout(2000),
     });
     if (!res.ok) {
       return null;
@@ -123,7 +124,7 @@ export async function fetchUserRepositories(
   try {
     const res = await fetch(
       `https://api.github.com/users/${targetUser}/repos?sort=pushed&direction=desc&per_page=${limit}`,
-      { headers: getHeaders() }
+      { headers: getHeaders(), signal: AbortSignal.timeout(2000) }
     );
     if (!res.ok) {
       return [];
@@ -179,7 +180,7 @@ export async function fetchUserEvents(
   try {
     const res = await fetch(
       `https://api.github.com/users/${targetUser}/events?per_page=${perPage}`,
-      { headers: getHeaders() }
+      { headers: getHeaders(), signal: AbortSignal.timeout(2000) }
     );
     if (!res.ok) {
       return { commitsToday: 0, streakDays: 0, recentCommits: [], lastActiveAt: null };

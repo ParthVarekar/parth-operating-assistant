@@ -10,6 +10,8 @@ import { existsSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { getUserProfile, setUserProfile } from "../db/repositories/habitRepository.js";
 import { ingestProfessorAnnouncement } from "./announcementParser.js";
+import { broadcastAcademicNoticeToDiscord } from "./discordService.js";
+import { appendChatMessage } from "../agent/chatHandler.js";
 
 export function getWhatsAppAuthDir(): string {
   return process.env.WHATSAPP_AUTH_DIR || resolve(process.cwd(), "data", "whatsapp_auth");
@@ -39,16 +41,83 @@ const ACADEMIC_KEYWORDS = [
   "due date",
   "deadline",
   "practical turn",
+  "turn",
   "writeup",
   "unit test",
   "viva",
   "black book",
   "synopsis",
+  "ia1",
+  "ia2",
+  "timetable",
+  "attendance",
+  "exam",
+  "practicals",
+  "syllabus",
+  "announcement",
+  "notice",
+  "cr notice",
+];
+
+const DEFAULT_MONITORED_GROUPS = [
+  "important announcements",
+  "important announcement",
+  "announcements",
+  "announcement",
+  "kccemsr",
+  "kc college",
+  "comps",
+  "computer engineering",
+  "cr notice",
+  "class representative",
+  "be comps",
+  "te comps",
+  "se comps",
 ];
 
 let activeSocket: WASocket | null = null;
 let isSocketConnected = false;
 let alertListeners: Array<(alert: WhatsAppAcademicAlert) => Promise<void>> = [];
+
+// Group subject metadata cache (jid -> { subject, cachedAt })
+const groupMetadataCache = new Map<string, { subject: string; cachedAt: number }>();
+
+/**
+ * Checks if a group name matches priority college announcement channels.
+ */
+export function isMonitoredAcademicGroup(groupName: string): boolean {
+  if (!groupName) return false;
+  const lower = groupName.toLowerCase().trim();
+
+  // Check default patterns
+  if (DEFAULT_MONITORED_GROUPS.some((pattern) => lower.includes(pattern))) {
+    return true;
+  }
+
+  // Check user-configured custom group list
+  const customGroups = getUserProfile<string[]>("whatsapp_monitored_groups") ?? [];
+  return customGroups.some((g) => lower.includes(g.toLowerCase().trim()));
+}
+
+/**
+ * Resolves the subject/title of a WhatsApp group using Baileys with caching.
+ */
+export async function resolveGroupSubject(sock: WASocket, groupJid: string): Promise<string> {
+  const cached = groupMetadataCache.get(groupJid);
+  const now = Date.now();
+  if (cached && now - cached.cachedAt < 3600000) {
+    return cached.subject;
+  }
+
+  try {
+    const meta = await sock.groupMetadata(groupJid);
+    const subject = meta?.subject || "College Group";
+    groupMetadataCache.set(groupJid, { subject, cachedAt: now });
+    return subject;
+  } catch {
+    return "Class Group";
+  }
+}
 
 /**
  * Checks if WhatsApp has valid saved authentication credentials on disk.
@@ -61,9 +130,29 @@ export function isWhatsAppConfigured(): boolean {
  * Checks if a message text contains actionable college academic keywords.
  */
 export function isAcademicMessage(text: string): boolean {
-  if (!text || text.length < 15) return false;
+  if (!text || text.length < 10) return false;
   const lower = text.toLowerCase();
   return ACADEMIC_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+/**
+ * Extracts complete text from various Baileys message structures.
+ */
+export function extractWhatsAppMessageText(msg: any): string {
+  if (!msg || !msg.message) return "";
+
+  const m = msg.message;
+  return (
+    m.conversation ||
+    m.extendedTextMessage?.text ||
+    m.imageMessage?.caption ||
+    m.documentMessage?.caption ||
+    m.documentMessage?.fileName ||
+    m.documentWithCaptionMessage?.message?.documentMessage?.caption ||
+    m.documentWithCaptionMessage?.message?.documentMessage?.fileName ||
+    m.videoMessage?.caption ||
+    ""
+  );
 }
 
 /**
@@ -145,6 +234,7 @@ export async function startWhatsAppClient(): Promise<boolean> {
         if (phone) {
           setUserProfile("whatsapp_linked_phone", phone);
         }
+        console.log("📲 WhatsApp socket connected in STRICT READ-ONLY mode. Monitoring class groups.");
       } else if (connection === "close") {
         isSocketConnected = false;
         activeSocket = null;
@@ -165,19 +255,27 @@ export async function startWhatsAppClient(): Promise<boolean> {
       for (const msg of messages) {
         if (msg.key.fromMe) continue; // Ignore own outgoing messages
 
-        const conversationText =
-          msg.message?.conversation ||
-          msg.message?.extendedTextMessage?.text ||
-          msg.message?.imageMessage?.caption ||
-          "";
-
-        if (!isAcademicMessage(conversationText)) {
-          continue;
-        }
+        const conversationText = extractWhatsAppMessageText(msg).trim();
+        if (!conversationText) continue;
 
         const senderJid = msg.key.remoteJid ?? "unknown";
         const senderName = msg.pushName || senderJid.split("@")[0] || "College Chat";
         const isGroup = senderJid.endsWith("@g.us");
+
+        let chatName = senderName;
+        let isPriorityGroup = false;
+
+        if (isGroup) {
+          chatName = await resolveGroupSubject(sock, senderJid);
+          isPriorityGroup = isMonitoredAcademicGroup(chatName);
+        }
+
+        // If it's not a recognized priority group AND doesn't match academic keywords, skip
+        if (!isPriorityGroup && !isAcademicMessage(conversationText)) {
+          continue;
+        }
+
+        console.log(`📑 Ingesting notice from [${chatName}] by ${senderName}: "${conversationText.slice(0, 60)}..."`);
 
         try {
           const ingestion = await ingestProfessorAnnouncement(conversationText);
@@ -186,7 +284,7 @@ export async function startWhatsAppClient(): Promise<boolean> {
             const alert: WhatsAppAcademicAlert = {
               id: crypto.randomUUID(),
               sender: senderName,
-              chatName: isGroup ? "Class Group" : senderName,
+              chatName,
               text: conversationText,
               timestamp: new Date().toISOString(),
               tasksCount: ingestion.tasksCreated.length,
@@ -194,10 +292,24 @@ export async function startWhatsAppClient(): Promise<boolean> {
             };
 
             const existing = getUserProfile<WhatsAppAcademicAlert[]>("whatsapp_recent_alerts") ?? [];
-            const updated = [alert, ...existing.slice(0, 19)];
+            const updated = [alert, ...existing.slice(0, 24)];
             setUserProfile("whatsapp_recent_alerts", updated);
 
-            // Broadcast to listeners (Telegram push)
+            // 1. Proactive Broadcast to Discord #college-announcements
+            broadcastAcademicNoticeToDiscord(alert).catch((err) => {
+              console.error("Failed to broadcast WhatsApp notice to Discord:", err);
+            });
+
+            // 2. Stream notice into Dashboard Chat stream
+            appendChatMessage({
+              id: crypto.randomUUID(),
+              role: "system",
+              text: `📢 **College Announcement Captured from ${chatName}** (${senderName}):\n"${conversationText}"\n👉 Added ${ingestion.tasksCreated.length} task(s) and flagged ${ingestion.physicalSubmissionsCount} physical lab turn(s).`,
+              timestamp: new Date().toISOString(),
+              channel: "whatsapp",
+            });
+
+            // 3. Broadcast to Telegram push listeners
             for (const listener of alertListeners) {
               try {
                 await listener(alert);
@@ -267,7 +379,7 @@ export function formatWhatsAppStatusDigest(): string {
     return lines.join("\n");
   }
 
-  lines.push(`🟢 *Status:* ${status.isConnected ? "Active & Monitoring" : "Credentials Ready (Connecting...)"}`);
+  lines.push(`🟢 *Status:* ${status.isConnected ? "Active & Monitoring Class Groups" : "Credentials Ready (Connecting...)"}`);
   if (status.phoneNumber) {
     lines.push(`📱 *Linked Device:* \`+${status.phoneNumber}\``);
   }
@@ -275,8 +387,10 @@ export function formatWhatsAppStatusDigest(): string {
     lines.push(`🕒 *Linked Since:* ${new Date(status.linkedAt).toLocaleDateString("en-IN")}`);
   }
 
-  lines.push(`\n🔍 *Monitored Keywords:*`);
-  lines.push(`\`submission\`, \`journal\`, \`experiment\`, \`printout\`, \`xerox\`, \`defaulter\`, \`deadline\``);
+  lines.push(`\n🔍 *Priority Monitored Channels:*`);
+  lines.push(`• "Important Announcements" (All messages analyzed)`);
+  lines.push(`• KCCEMSR CR & College Notice Groups`);
+  lines.push(`• Keywords: \`submission\`, \`journal\`, \`experiment\`, \`printout\`, \`xerox\`, \`turn\`, \`viva\`, \`defaulter\``);
 
   if (recentAlerts.length > 0) {
     lines.push(`\n📑 *Recently Captured Academic Notices (${recentAlerts.length}):*`);
@@ -284,12 +398,12 @@ export function formatWhatsAppStatusDigest(): string {
       const a = recentAlerts[i]!;
       const timeStr = new Date(a.timestamp).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
       const snippet = a.text.length > 70 ? `${a.text.slice(0, 70)}...` : a.text;
-      lines.push(`${i + 1}. *[${a.sender}]* (${timeStr}):`);
+      lines.push(`${i + 1}. *[${a.sender} in ${a.chatName}]* (${timeStr}):`);
       lines.push(`   "${snippet}"`);
       lines.push(`   👉 Added *${a.tasksCount} task(s)* | *${a.physicalSubmissionsCount} print(s)*`);
     }
   } else {
-    lines.push(`\n✨ *No academic notices captured yet.* Awaiting messages from your college groups.`);
+    lines.push(`\n✨ *Awaiting new notices from Important Announcements & college groups.*`);
   }
 
   return lines.join("\n");

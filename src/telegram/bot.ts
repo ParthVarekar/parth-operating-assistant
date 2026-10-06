@@ -12,6 +12,7 @@ import { generateLearnedProfileSummary, recordTaskCompletionVelocity } from "../
 import { insertMeal } from "../db/repositories/mealRepository.js";
 import { getUserProfile, setUserProfile } from "../db/repositories/habitRepository.js";
 import { registerEventHandler } from "../scheduler/eventHeartbeat.js";
+import { registerTelegramBotForOutreach } from "../scheduler/autonomousHeartbeat.js";
 import {
   findHackathonById,
   seedInitialCuratedHackathons,
@@ -96,6 +97,7 @@ export function createTelegramBot(): Bot {
   seedInitialCuratedHackathons();
   const env = getEnv();
   const bot = new Bot(env.TELEGRAM_BOT_TOKEN);
+  registerTelegramBotForOutreach(bot);
 
   // Global Error Handler Guard: prevents unhandled rejections from crashing polling daemon
   bot.catch((err) => {

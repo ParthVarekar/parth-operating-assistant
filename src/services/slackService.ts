@@ -73,10 +73,10 @@ export async function sendSlackNotification(options: SlackMessageOptions): Promi
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(2500),
     });
     return res.ok;
   } catch (err) {
-    console.error("Error sending Slack notification:", err);
     return false;
   }
 }
