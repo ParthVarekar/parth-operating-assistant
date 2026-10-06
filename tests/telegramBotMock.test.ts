@@ -97,7 +97,7 @@ describe("Telegram Gateway Full Mock Interaction Suite", () => {
     expect(activeSubs.some((s) => s.subject.includes("Coursework") || s.notes?.includes("print"))).toBe(true);
   });
 
-  it("handles '🍱 Log Meal' quick button press and persists meal record", async () => {
+  it("handles '🍱 Meals & Gym' quick button press and displays nutrition tracker with presets", async () => {
     const { bot, sentMessages } = setupMockBot();
 
     const update: Update = {
@@ -107,18 +107,15 @@ describe("Telegram Gateway Full Mock Interaction Suite", () => {
         date: Math.floor(Date.now() / 1000),
         chat: { id: authorizedUserId, type: "private", first_name: "Parth" },
         from: { id: authorizedUserId, is_bot: false, first_name: "Parth" },
-        text: "🍱 Log Meal",
+        text: "🍱 Meals & Gym",
       },
     };
 
     await bot.handleUpdate(update);
 
     expect(sentMessages.length).toBeGreaterThanOrEqual(1);
-    expect(sentMessages[0]!.payload.text).toContain("Meal logged! Keep fueling your gym recovery.");
-
-    const today = new Date().toISOString().slice(0, 10);
-    const meals = findMealsForDate(today);
-    expect(meals.some((m) => m.mealType === "dinner" && m.status === "completed")).toBe(true);
+    expect(sentMessages[0]!.payload.text).toContain("Gym & Nutrition Tracker");
+    expect(sentMessages[0]!.payload.text).toContain("Protein:");
   });
 
   it("handles inline button click 'task_slip:id:15' and updates schedule in-place", async () => {

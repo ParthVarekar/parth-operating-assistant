@@ -33,6 +33,13 @@ import {
   syncClassroomAssignments,
 } from "../services/googleClassroomService.js";
 import { ingestProfessorAnnouncement } from "../services/announcementParser.js";
+import {
+  formatFitnessDigest,
+  getDailyFitnessSummary,
+  logCustomMeal,
+  logQuickPresetMeal,
+  logWorkoutSession,
+} from "../services/fitnessService.js";
 import type { CityZone, SubmissionStage } from "../types/index.js";
 
 /**
@@ -45,7 +52,7 @@ export function createTelegramBot(): Bot {
   const bot = new Bot(env.TELEGRAM_BOT_TOKEN);
 
   const mainKeyboard = new Keyboard()
-    .text("📋 What's Next?").text("🍱 Log Meal")
+    .text("📋 What's Next?").text("🍱 Meals & Gym")
     .row()
     .text("⚠️ Slipped/Late").text("🔄 Plan Tonight")
     .row()
@@ -418,6 +425,88 @@ export function createTelegramBot(): Bot {
     }
   });
 
+  // /gym, /fitness, and /meals Commands & "🍱 Meals & Gym"
+  const buildFitnessKeyboard = (): InlineKeyboard => {
+    return new InlineKeyboard()
+      .text("🍳 Eggs + Toast (+28g P)", "meal_preset:eggs_toast")
+      .text("🥤 Whey Shake (+26g P)", "meal_preset:whey_shake")
+      .row()
+      .text("🍱 Solid Dinner (+34g P)", "meal_preset:solid_dinner")
+      .text("🥪 Quick Snack (+14g P)", "meal_preset:quick_snack")
+      .row()
+      .text("🥛 Late Night Milk (+12g P)", "meal_preset:night_fuel")
+      .row()
+      .text("🏋️ Log Workout", "fitness_workout_menu");
+  };
+
+  const handleFitnessCommand = async (ctx: Context) => {
+    const summary = getDailyFitnessSummary();
+    const text = formatFitnessDigest(summary);
+    const kb = buildFitnessKeyboard();
+    await ctx.reply(text, { reply_markup: kb, parse_mode: "Markdown" });
+  };
+
+  bot.command(["gym", "fitness", "meals"], handleFitnessCommand);
+  bot.hears(["🍱 Meals & Gym", "🍱 Log Meal"], handleFitnessCommand);
+
+  bot.callbackQuery(/^meal_preset:(.+)$/, async (ctx) => {
+    const presetKey = ctx.match[1]!;
+    try {
+      const entry = logQuickPresetMeal(presetKey);
+      await ctx.answerCallbackQuery({
+        text: `+${entry.proteinGrams}g Protein logged! (${entry.mealName}) 🔥`,
+      });
+      const summary = getDailyFitnessSummary();
+      await ctx.editMessageText(formatFitnessDigest(summary), {
+        reply_markup: buildFitnessKeyboard(),
+        parse_mode: "Markdown",
+      });
+    } catch (err) {
+      await ctx.answerCallbackQuery({ text: "Could not log meal." });
+    }
+  });
+
+  bot.callbackQuery("fitness_workout_menu", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    const kb = new InlineKeyboard()
+      .text("🏋️ Push Day", "workout_done:Push Day (Chest, Shoulders, Triceps)")
+      .text("🏋️ Pull Day", "workout_done:Pull Day (Back, Biceps)")
+      .row()
+      .text("🏋️ Legs Day", "workout_done:Legs & Core")
+      .text("🏋️ Arms/Abs", "workout_done:Arms & Abs")
+      .row()
+      .text("🏃 Cardio/HIIT", "workout_done:Cardio / Conditioning")
+      .row()
+      .text("⬅️ Back to Nutrition", "fitness_back_nutrition");
+
+    await ctx.editMessageText("💪 *Select Workout Session to Log:*", {
+      reply_markup: kb,
+      parse_mode: "Markdown",
+    });
+  });
+
+  bot.callbackQuery("fitness_back_nutrition", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    const summary = getDailyFitnessSummary();
+    await ctx.editMessageText(formatFitnessDigest(summary), {
+      reply_markup: buildFitnessKeyboard(),
+      parse_mode: "Markdown",
+    });
+  });
+
+  bot.callbackQuery(/^workout_done:(.+)$/, async (ctx) => {
+    const type = ctx.match[1]!;
+    logWorkoutSession(type, 45);
+    await ctx.answerCallbackQuery({
+      text: "Session logged! Don't forget your post-workout protein! 💪",
+    });
+    const summary = getDailyFitnessSummary();
+    await ctx.editMessageText(formatFitnessDigest(summary), {
+      reply_markup: buildFitnessKeyboard(),
+      parse_mode: "Markdown",
+    });
+  });
+
   // Inline Button Callbacks
   bot.callbackQuery(/^hack_zone:(.+)$/, async (ctx) => {
     const zoneStr = ctx.match[1] ?? "all";
@@ -528,18 +617,8 @@ export function createTelegramBot(): Bot {
       return;
     }
 
-    if (text === "🍱 Log Meal") {
-      const today = new Date().toISOString().slice(0, 10);
-      const nowTime = new Date().toTimeString().slice(0, 5);
-      insertMeal({
-        id: crypto.randomUUID(),
-        date: today,
-        mealType: "dinner",
-        scheduledTime: nowTime,
-        status: "completed",
-        loggedAt: new Date().toISOString(),
-      });
-      await ctx.reply("🍱 Meal logged! Keep fueling your gym recovery.", { reply_markup: mainKeyboard });
+    if (text === "🍱 Meals & Gym" || text === "🍱 Log Meal") {
+      await handleFitnessCommand(ctx);
       return;
     }
 

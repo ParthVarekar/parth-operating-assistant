@@ -136,6 +136,28 @@ export function initDatabase(customPath?: string): DatabaseSync {
 
     CREATE INDEX IF NOT EXISTS idx_hackathons_city ON hackathons(city_zone);
     CREATE INDEX IF NOT EXISTS idx_hackathons_deadline ON hackathons(registration_deadline);
+
+    CREATE TABLE IF NOT EXISTS nutrition_logs (
+      id TEXT PRIMARY KEY,
+      date TEXT NOT NULL,
+      meal_name TEXT NOT NULL,
+      meal_type TEXT NOT NULL,
+      calories INTEGER NOT NULL,
+      protein_grams INTEGER NOT NULL,
+      logged_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS workout_logs (
+      id TEXT PRIMARY KEY,
+      date TEXT NOT NULL,
+      workout_type TEXT NOT NULL,
+      duration_minutes INTEGER NOT NULL,
+      notes TEXT,
+      logged_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_nutrition_date ON nutrition_logs(date);
+    CREATE INDEX IF NOT EXISTS idx_workout_date ON workout_logs(date);
   `);
 
   dbInstance = db;
