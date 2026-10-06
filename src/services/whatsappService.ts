@@ -226,11 +226,20 @@ export async function startWhatsAppClient(): Promise<boolean> {
     });
 
     // 🛡️ STRICT READ-ONLY SECURITY GUARD:
-    // Completely neuter outgoing message capabilities. The assistant CANNOT write, reply,
-    // or send messages to any WhatsApp chat, group, contact, or status under any circumstance.
+    // Completely neuter all outgoing message and chat mutation capabilities.
+    // The assistant CANNOT write, reply, relay, or send messages to any WhatsApp chat,
+    // group, contact, or status under any circumstance.
     sock.sendMessage = async () => {
       console.warn("🛡️ Security Guard: WhatsApp write operations are strictly disabled. Outgoing message blocked.");
       throw new Error("WHATSAPP_READ_ONLY: The assistant is strictly configured in read-only mode and cannot send messages.");
+    };
+    sock.relayMessage = async () => {
+      console.warn("🛡️ Security Guard: WhatsApp relayMessage is strictly disabled.");
+      throw new Error("WHATSAPP_READ_ONLY: relayMessage disabled.");
+    };
+    sock.chatModify = async () => {
+      console.warn("🛡️ Security Guard: WhatsApp chatModify is strictly disabled.");
+      throw new Error("WHATSAPP_READ_ONLY: chatModify disabled.");
     };
     sock.sendPresenceUpdate = async () => {};
 

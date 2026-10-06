@@ -168,20 +168,41 @@ export async function sendSegregatedDiscordEmbed(
     const isDedicated = getUserProfile<string>(`discord_webhook_url_${category}`);
     const channelTag = isDedicated ? "" : `[#${category}] `;
 
+    const rawTitle = `${channelTag}${options.title}`.trim();
+    const safeTitle = rawTitle.length > 256 ? `${rawTitle.slice(0, 253)}...` : rawTitle;
+
+    const rawFooter = options.footer || `Antigravity • Channel: #${category}`;
+    const safeFooter = rawFooter.length > 2048 ? `${rawFooter.slice(0, 2045)}...` : rawFooter;
+
+    // Discord has a strict 6,000 total character limit across title, desc, fields, footer.
+    // We cap description budget dynamically to leave room for fields and footer.
+    const rawDesc = (options.description || "").trim();
+    const maxDescLen = Math.min(3800, Math.max(500, 5600 - safeTitle.length - safeFooter.length));
+    const safeDesc = rawDesc.length > maxDescLen ? `${rawDesc.slice(0, maxDescLen - 3)}...` : rawDesc;
+
     const embed = new EmbedBuilder()
-      .setTitle(`${channelTag}${options.title}`)
-      .setDescription(options.description)
+      .setTitle(safeTitle)
+      .setDescription(safeDesc)
       .setColor(color);
 
+    let totalChars = safeTitle.length + safeDesc.length + safeFooter.length;
     if (options.fields && options.fields.length > 0) {
-      embed.addFields(options.fields);
+      const finalFields: { name: string; value: string; inline?: boolean }[] = [];
+      for (const f of options.fields.slice(0, 25)) {
+        const name = f.name.length > 256 ? `${f.name.slice(0, 253)}...` : f.name;
+        const value = f.value.length > 1024 ? `${f.value.slice(0, 1020)}...` : f.value;
+        if (totalChars + name.length + value.length > 5800) {
+          break; // Stop adding fields before hitting Discord's 6000 limit
+        }
+        totalChars += name.length + value.length;
+        finalFields.push({ name, value, inline: f.inline });
+      }
+      if (finalFields.length > 0) {
+        embed.addFields(finalFields);
+      }
     }
 
-    if (options.footer) {
-      embed.setFooter({ text: options.footer });
-    } else {
-      embed.setFooter({ text: `Antigravity • Channel: #${category}` });
-    }
+    embed.setFooter({ text: safeFooter });
 
     if (options.timestamp !== false) {
       embed.setTimestamp();

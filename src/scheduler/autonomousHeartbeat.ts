@@ -50,14 +50,20 @@ const notifiedUpcomingBlockIds = new Set<string>();
 const notifiedOverrunBlockIds = new Set<string>();
 
 let autonomousTimer: NodeJS.Timeout | null = null;
+let isHeartbeatRunning = false;
 
 /**
  * Main autonomous heartbeat tick executed periodically (every 30 seconds).
  */
 export async function tickAutonomousHeartbeat(): Promise<void> {
-  const now = Date.now();
-  const ist = getISTDateTime();
-  const phase = getCurrentRoutinePhase(ist.hours, ist.minutes);
+  if (isHeartbeatRunning) {
+    return;
+  }
+  isHeartbeatRunning = true;
+  try {
+    const now = Date.now();
+    const ist = getISTDateTime();
+    const phase = getCurrentRoutinePhase(ist.hours, ist.minutes);
 
   // -------------------------------------------------------------
   // 1. Task Scheduler & Timetable Check (Every 15s - 15 mins)
@@ -268,6 +274,9 @@ export async function tickAutonomousHeartbeat(): Promise<void> {
   } catch (nutrErr) {
     console.error("Error in nutrition heartbeat monitor:", nutrErr);
   }
+} finally {
+  isHeartbeatRunning = false;
+}
 }
 
 /**

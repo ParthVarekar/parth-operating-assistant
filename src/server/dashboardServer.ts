@@ -2389,8 +2389,11 @@ export function startDashboardServer(customPort?: number): http.Server {
       res.end(JSON.stringify({ error: "Not Found", path: pathname }));
     } catch (err: any) {
       console.error("Dashboard server request error:", err);
-      res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Internal Server Error", message: err?.message }));
+      const isTooLarge = err?.message?.includes("too large");
+      const isInvalidJson = err?.message?.includes("Invalid JSON");
+      const statusCode = isTooLarge ? 413 : isInvalidJson ? 400 : 500;
+      res.writeHead(statusCode, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: err?.message || "Internal Server Error" }));
     }
   });
 

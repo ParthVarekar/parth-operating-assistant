@@ -63,7 +63,13 @@ const CASUAL_GREETINGS = new Set([
  * emoji spam, and redundant whitespace.
  */
 export function normalizeText(text: string): string {
-  let cleaned = text
+  if (!text || typeof text !== "string") {
+    return "";
+  }
+  // Cap at 15,000 chars to prevent ReDoS on massive pastes
+  const safeText = text.slice(0, 15000);
+
+  let cleaned = safeText
     .replace(/^fwd:?\s*/i, "")
     .replace(/^\[?forwarded(?:\s+message|\s+from[^\]]*)?\]?:?\s*/i, "")
     .replace(/^-{5,}\s*forwarded message\s*-{5,}/i, "")
@@ -81,6 +87,9 @@ export function normalizeText(text: string): string {
  * Extracts and cleans valid URLs from message content, stripping tracking parameters.
  */
 export function extractUrls(text: string): string[] {
+  if (!text || typeof text !== "string") {
+    return [];
+  }
   const urlRegex = /(https?:\/\/[^\s<>"{}|\\^~\[\]`]+)/gi;
   const matches = text.match(urlRegex) ?? [];
   const cleanUrls: string[] = [];
@@ -89,6 +98,9 @@ export function extractUrls(text: string): string[] {
     let clean = raw.replace(/[.,;:!?)+\]]+$/, "");
     try {
       const parsed = new URL(clean);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        continue;
+      }
       // Remove common query tracking parameters for deduplication
       const paramsToRemove = ["usp", "utm_source", "utm_medium", "utm_campaign", "authuser", "fbclid", "igshid"];
       for (const p of paramsToRemove) {
