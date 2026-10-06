@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
+import { resolve } from "node:path";
 import { initDatabase } from "../src/db/database.js";
 import { setUserProfile } from "../src/db/repositories/habitRepository.js";
 import {
@@ -13,6 +14,7 @@ import {
 describe("WhatsApp Academic Group Monitor Suite", () => {
   beforeAll(() => {
     process.env.DATABASE_PATH = ":memory:";
+    process.env.WHATSAPP_AUTH_DIR = resolve(process.cwd(), "data", "test_whatsapp_auth");
     initDatabase(":memory:");
   });
 
@@ -74,11 +76,10 @@ describe("WhatsApp Academic Group Monitor Suite", () => {
       receivedAlert = alert;
     });
 
-    // Verify registration works without error
     expect(typeof onWhatsAppAcademicNotice).toBe("function");
   });
 
-  it("disconnects and wipes state cleanly", () => {
+  it("disconnects and wipes state cleanly without touching production credentials", () => {
     disconnectWhatsApp();
     const status = getWhatsAppStatus();
     expect(status.phoneNumber).toBeNull();

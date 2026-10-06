@@ -11,7 +11,9 @@ import { resolve } from "node:path";
 import { getUserProfile, setUserProfile } from "../db/repositories/habitRepository.js";
 import { ingestProfessorAnnouncement } from "./announcementParser.js";
 
-const AUTH_DIR = resolve(process.cwd(), "data", "whatsapp_auth");
+export function getWhatsAppAuthDir(): string {
+  return process.env.WHATSAPP_AUTH_DIR || resolve(process.cwd(), "data", "whatsapp_auth");
+}
 
 export interface WhatsAppAcademicAlert {
   id: string;
@@ -52,7 +54,7 @@ let alertListeners: Array<(alert: WhatsAppAcademicAlert) => Promise<void>> = [];
  * Checks if WhatsApp has valid saved authentication credentials on disk.
  */
 export function isWhatsAppConfigured(): boolean {
-  return existsSync(resolve(AUTH_DIR, "creds.json"));
+  return existsSync(resolve(getWhatsAppAuthDir(), "creds.json"));
 }
 
 /**
@@ -111,7 +113,7 @@ export async function startWhatsAppClient(): Promise<boolean> {
   }
 
   try {
-    const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+    const { state, saveCreds } = await useMultiFileAuthState(getWhatsAppAuthDir());
     const { version } = await fetchLatestBaileysVersion();
 
     const sock = makeWASocket({
@@ -121,6 +123,15 @@ export async function startWhatsAppClient(): Promise<boolean> {
       printQRInTerminal: false,
       browser: ["Antigravity Assistant", "Chrome", "1.0.0"],
     });
+
+    // 🛡️ STRICT READ-ONLY SECURITY GUARD:
+    // Completely neuter outgoing message capabilities. The assistant CANNOT write, reply,
+    // or send messages to any WhatsApp chat, group, contact, or status under any circumstance.
+    sock.sendMessage = async () => {
+      console.warn("🛡️ Security Guard: WhatsApp write operations are strictly disabled. Outgoing message blocked.");
+      throw new Error("WHATSAPP_READ_ONLY: The assistant is strictly configured in read-only mode and cannot send messages.");
+    };
+    sock.sendPresenceUpdate = async () => {};
 
     sock.ev.on("creds.update", saveCreds);
 
@@ -228,8 +239,9 @@ export function stopWhatsAppClient(): void {
  */
 export function disconnectWhatsApp(): void {
   stopWhatsAppClient();
-  if (existsSync(AUTH_DIR)) {
-    rmSync(AUTH_DIR, { recursive: true, force: true });
+  const dir = getWhatsAppAuthDir();
+  if (existsSync(dir)) {
+    rmSync(dir, { recursive: true, force: true });
   }
   setUserProfile("whatsapp_linked_phone", "");
   setUserProfile("whatsapp_linked_at", "");
