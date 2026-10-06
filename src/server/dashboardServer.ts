@@ -287,22 +287,24 @@ export function getDashboardHtml(): string {
   <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono:ital@0;1&family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #070707;
-      --bg-card: #0D0D0D;
-      --bg-card-hover: #121212;
-      --bg-card-subtle: #171717;
-      --border: #1A1A1A;
-      --border-hover: #292929;
-      --border-accent: #333333;
-      --text: #F3F3F3;
-      --text-muted: #888888;
-      --text-dim: #4B4B4B;
-      --emerald: #10B981;
-      --emerald-glow: rgba(16, 185, 129, 0.12);
-      --amber: #F59E0B;
-      --amber-glow: rgba(245, 158, 11, 0.12);
-      --indigo: #6366F1;
-      --radius: 10px;
+      --bg: #FAF7F2;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #FCFBF9;
+      --bg-card-subtle: #F4EFE6;
+      --border: #E8E2D8;
+      --border-hover: #D8D0C3;
+      --border-accent: #C4B9A7;
+      --text: #1C1917;
+      --text-muted: #78716C;
+      --text-dim: #A8A29E;
+      --emerald: #15803D;
+      --emerald-glow: rgba(21, 128, 61, 0.12);
+      --amber: #D97706;
+      --amber-glow: rgba(217, 119, 6, 0.12);
+      --terracotta: #C2410C;
+      --radius: 12px;
+      --shadow-sm: 0 1px 2px rgba(60, 45, 30, 0.04);
+      --shadow-card: 0 1px 3px rgba(60, 45, 30, 0.04), 0 8px 24px -4px rgba(60, 45, 30, 0.04);
     }
 
     * {
@@ -319,16 +321,16 @@ export function getDashboardHtml(): string {
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
       background-image: 
-        radial-gradient(circle at 50% 0%, #151515 0%, transparent 50%),
-        linear-gradient(to right, rgba(255,255,255,0.015) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255,255,255,0.015) 1px, transparent 1px);
-      background-size: 100% 100%, 32px 32px, 32px 32px;
+        radial-gradient(circle at 50% 0%, #FFFDF9 0%, #FAF7F2 85%),
+        linear-gradient(to right, rgba(120, 100, 80, 0.035) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(120, 100, 80, 0.035) 1px, transparent 1px);
+      background-size: 100% 100%, 36px 36px, 36px 36px;
     }
 
     .container {
       max-width: 1320px;
       margin: 0 auto;
-      padding: 32px 24px 64px 24px;
+      padding: 36px 24px 64px 24px;
     }
 
     /* Top Nav / Identity Bar */
@@ -336,7 +338,7 @@ export function getDashboardHtml(): string {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 40px;
+      margin-bottom: 36px;
       padding-bottom: 24px;
       border-bottom: 1px solid var(--border);
       flex-wrap: wrap;
@@ -344,27 +346,28 @@ export function getDashboardHtml(): string {
     }
 
     .brand-title {
-      font-size: 20px;
+      font-size: 21px;
       font-weight: 600;
       letter-spacing: -0.02em;
       display: flex;
       align-items: center;
       gap: 10px;
+      color: var(--text);
     }
 
     .brand-title .serif-flair {
       font-family: 'Instrument Serif', Georgia, serif;
       font-style: italic;
-      font-size: 26px;
+      font-size: 27px;
       font-weight: 400;
-      color: #FFF;
+      color: #92400E;
     }
 
     .brand-sub {
       font-family: 'Fragment Mono', monospace;
       font-size: 11px;
       color: var(--text-muted);
-      letter-spacing: 0.04em;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
       margin-top: 4px;
     }
@@ -387,6 +390,7 @@ export function getDashboardHtml(): string {
       font-family: 'Fragment Mono', monospace;
       font-size: 11px;
       color: var(--text);
+      box-shadow: var(--shadow-sm);
     }
 
     .pulse-dot {
@@ -394,7 +398,7 @@ export function getDashboardHtml(): string {
       height: 7px;
       background: var(--emerald);
       border-radius: 50%;
-      box-shadow: 0 0 8px var(--emerald);
+      box-shadow: 0 0 8px rgba(21, 128, 61, 0.4);
       animation: pulse 2s infinite ease-in-out;
     }
 
@@ -406,11 +410,12 @@ export function getDashboardHtml(): string {
     .clock-display {
       font-family: 'Fragment Mono', monospace;
       font-size: 13px;
-      color: var(--text-muted);
-      background: #000;
-      padding: 6px 12px;
+      color: #44403C;
+      background: #F4EFE6;
+      padding: 6px 14px;
       border-radius: 6px;
       border: 1px solid var(--border);
+      font-weight: 500;
     }
 
     /* Actions Bar */
@@ -435,25 +440,28 @@ export function getDashboardHtml(): string {
       gap: 6px;
       transition: all 0.15s ease;
       text-decoration: none;
+      box-shadow: var(--shadow-sm);
     }
 
     .btn:hover {
-      background: var(--bg-card-hover);
+      background: #FDFCF9;
       border-color: var(--border-hover);
       transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(60, 45, 30, 0.06);
     }
 
     .btn-primary {
-      background: #FFFFFF;
-      color: #000000;
-      border-color: #FFFFFF;
+      background: #1C1917;
+      color: #FAF7F2;
+      border-color: #1C1917;
       font-weight: 600;
+      box-shadow: 0 2px 6px rgba(28, 25, 23, 0.15);
     }
 
     .btn-primary:hover {
-      background: #E5E5E5;
-      border-color: #E5E5E5;
-      color: #000;
+      background: #292524;
+      border-color: #292524;
+      color: #FAF7F2;
     }
 
     /* Phase Banner */
@@ -468,6 +476,7 @@ export function getDashboardHtml(): string {
       margin-bottom: 28px;
       position: relative;
       overflow: hidden;
+      box-shadow: var(--shadow-card);
     }
 
     .phase-banner::before {
@@ -477,7 +486,7 @@ export function getDashboardHtml(): string {
       top: 0;
       bottom: 0;
       width: 4px;
-      background: var(--emerald);
+      background: var(--amber);
     }
 
     .phase-info h2 {
@@ -486,6 +495,7 @@ export function getDashboardHtml(): string {
       display: flex;
       align-items: center;
       gap: 8px;
+      color: var(--text);
     }
 
     .phase-info p {
@@ -516,13 +526,15 @@ export function getDashboardHtml(): string {
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 24px;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
       display: flex;
       flex-direction: column;
+      box-shadow: var(--shadow-card);
     }
 
     .card:hover {
       border-color: var(--border-hover);
+      box-shadow: 0 4px 12px rgba(60, 45, 30, 0.06), 0 12px 28px -6px rgba(60, 45, 30, 0.05);
     }
 
     .card-header {
@@ -537,7 +549,7 @@ export function getDashboardHtml(): string {
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: var(--text-muted);
+      color: #78716C;
       font-family: 'Fragment Mono', monospace;
       display: flex;
       align-items: center;
@@ -547,11 +559,11 @@ export function getDashboardHtml(): string {
     .card-badge {
       font-family: 'Fragment Mono', monospace;
       font-size: 11px;
-      padding: 2px 8px;
+      padding: 3px 8px;
       border-radius: 4px;
       background: var(--bg-card-subtle);
       border: 1px solid var(--border);
-      color: var(--text);
+      color: #57534E;
     }
 
     /* Schedule Blocks list */
@@ -563,25 +575,28 @@ export function getDashboardHtml(): string {
     }
 
     .schedule-block {
-      background: #0A0A0A;
+      background: #FDFBF8;
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 8px;
       padding: 12px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      transition: border-color 0.15s ease;
+      transition: all 0.15s ease;
     }
 
     .schedule-block:hover {
       border-color: var(--border-hover);
+      background: #FFFFFF;
+      box-shadow: var(--shadow-sm);
     }
 
     .schedule-time {
       font-family: 'Fragment Mono', monospace;
       font-size: 12px;
-      color: var(--emerald);
+      color: #92400E;
+      font-weight: 600;
       white-space: nowrap;
       min-width: 96px;
     }
@@ -590,6 +605,7 @@ export function getDashboardHtml(): string {
       font-size: 13px;
       font-weight: 500;
       flex: 1;
+      color: var(--text);
     }
 
     .schedule-status {
@@ -598,14 +614,14 @@ export function getDashboardHtml(): string {
       text-transform: uppercase;
       padding: 2px 8px;
       border-radius: 4px;
-      background: #151515;
+      background: #F4EFE6;
       color: var(--text-muted);
     }
 
     .schedule-status.completed {
-      background: var(--emerald-glow);
-      color: var(--emerald);
-      border: 1px solid rgba(16, 185, 129, 0.3);
+      background: rgba(22, 163, 74, 0.1);
+      color: #15803D;
+      border: 1px solid rgba(22, 163, 74, 0.3);
     }
 
     /* Fitness Meters */
@@ -632,7 +648,7 @@ export function getDashboardHtml(): string {
 
     .meter-bar {
       height: 8px;
-      background: #171717;
+      background: #EDE6DA;
       border-radius: 9999px;
       overflow: hidden;
       position: relative;
@@ -645,13 +661,13 @@ export function getDashboardHtml(): string {
     }
 
     .fill-protein {
-      background: linear-gradient(90deg, #10B981, #34D399);
-      box-shadow: 0 0 10px var(--emerald-glow);
+      background: linear-gradient(90deg, #15803D, #22C55E);
+      box-shadow: 0 0 10px rgba(22, 163, 74, 0.25);
     }
 
     .fill-calories {
-      background: linear-gradient(90deg, #F59E0B, #FBBF24);
-      box-shadow: 0 0 10px var(--amber-glow);
+      background: linear-gradient(90deg, #D97706, #F59E0B);
+      box-shadow: 0 0 10px rgba(217, 119, 6, 0.25);
     }
 
     .presets-row {
@@ -662,7 +678,7 @@ export function getDashboardHtml(): string {
     }
 
     .preset-btn {
-      background: #0D0D0D;
+      background: #FAF7F2;
       border: 1px solid var(--border);
       border-radius: 6px;
       padding: 8px 10px;
@@ -673,20 +689,23 @@ export function getDashboardHtml(): string {
     }
 
     .preset-btn:hover {
-      background: var(--bg-card-hover);
+      background: #FFFFFF;
       border-color: var(--border-hover);
+      box-shadow: var(--shadow-sm);
     }
 
     .preset-btn .p-name {
       font-size: 11px;
       font-weight: 500;
       display: block;
+      color: var(--text);
     }
 
     .preset-btn .p-sub {
       font-family: 'Fragment Mono', monospace;
       font-size: 10px;
-      color: var(--emerald);
+      color: #15803D;
+      font-weight: 600;
     }
 
     /* Hubs Grid */
@@ -697,19 +716,26 @@ export function getDashboardHtml(): string {
     }
 
     .hub-item {
-      background: #0A0A0A;
+      background: #FDFBF8;
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 8px;
       padding: 12px 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 10px;
+      transition: all 0.15s ease;
+    }
+
+    .hub-item:hover {
+      border-color: var(--border-hover);
+      background: #FFFFFF;
     }
 
     .hub-item .hub-name {
       font-size: 13px;
       font-weight: 500;
+      color: var(--text);
     }
 
     .hub-item .hub-desc {
@@ -726,13 +752,14 @@ export function getDashboardHtml(): string {
     }
 
     .tag-active {
-      background: var(--emerald-glow);
-      color: var(--emerald);
-      border: 1px solid rgba(16, 185, 129, 0.3);
+      background: rgba(22, 163, 74, 0.1);
+      color: #15803D;
+      border: 1px solid rgba(22, 163, 74, 0.3);
+      font-weight: 600;
     }
 
     .tag-neutral {
-      background: #171717;
+      background: #F4EFE6;
       color: var(--text-muted);
       border: 1px solid var(--border);
     }
@@ -745,19 +772,26 @@ export function getDashboardHtml(): string {
     }
 
     .hackathon-item {
-      background: #0A0A0A;
+      background: #FDFBF8;
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 8px;
       padding: 12px 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 12px;
+      transition: all 0.15s ease;
+    }
+
+    .hackathon-item:hover {
+      border-color: var(--border-hover);
+      background: #FFFFFF;
     }
 
     .hack-title {
       font-size: 13px;
       font-weight: 500;
+      color: var(--text);
     }
 
     .hack-meta {
@@ -775,19 +809,26 @@ export function getDashboardHtml(): string {
     }
 
     .task-row {
-      background: #0A0A0A;
+      background: #FDFBF8;
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 8px;
       padding: 10px 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 12px;
+      transition: all 0.15s ease;
+    }
+
+    .task-row:hover {
+      border-color: var(--border-hover);
+      background: #FFFFFF;
     }
 
     .task-title {
       font-size: 13px;
       font-weight: 500;
+      color: var(--text);
     }
 
     .task-meta {
@@ -802,17 +843,18 @@ export function getDashboardHtml(): string {
       padding: 2px 6px;
       border-radius: 4px;
       text-transform: uppercase;
+      font-weight: 600;
     }
 
-    .pri-urgent { background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3); }
-    .pri-high { background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.3); }
-    .pri-medium { background: rgba(59, 130, 246, 0.15); color: #3B82F6; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .pri-urgent { background: rgba(220, 38, 38, 0.1); color: #B91C1C; border: 1px solid rgba(220, 38, 38, 0.3); }
+    .pri-high { background: rgba(217, 119, 6, 0.1); color: #B45309; border: 1px solid rgba(217, 119, 6, 0.3); }
+    .pri-medium { background: rgba(79, 70, 229, 0.1); color: #4338CA; border: 1px solid rgba(79, 70, 229, 0.3); }
 
     /* Modal Form */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.85);
+      background: rgba(50, 40, 30, 0.45);
       backdrop-filter: blur(4px);
       display: none;
       align-items: center;
@@ -821,12 +863,13 @@ export function getDashboardHtml(): string {
     }
 
     .modal {
-      background: #0E0E0E;
-      border: 1px solid var(--border-hover);
-      border-radius: 12px;
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: 14px;
       width: 90%;
       max-width: 480px;
-      padding: 24px;
+      padding: 28px;
+      box-shadow: 0 20px 40px -10px rgba(60, 45, 30, 0.15);
     }
 
     .modal-title {
@@ -836,6 +879,7 @@ export function getDashboardHtml(): string {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      color: var(--text);
     }
 
     .form-group {
@@ -852,17 +896,19 @@ export function getDashboardHtml(): string {
 
     .form-input, .form-select {
       width: 100%;
-      background: #060606;
+      background: #FAF8F5;
       border: 1px solid var(--border);
       border-radius: 6px;
-      padding: 8px 12px;
+      padding: 9px 12px;
       color: var(--text);
       font-size: 13px;
+      transition: all 0.15s ease;
     }
 
     .form-input:focus, .form-select:focus {
       outline: none;
-      border-color: #555;
+      border-color: #A8A29E;
+      background: #FFFFFF;
     }
 
     .form-actions {
@@ -877,16 +923,16 @@ export function getDashboardHtml(): string {
       position: fixed;
       bottom: 24px;
       right: 24px;
-      background: #111;
-      border: 1px solid var(--emerald);
-      color: #FFF;
+      background: #1C1917;
+      border: 1px solid #44403C;
+      color: #FAF7F2;
       padding: 10px 18px;
       border-radius: 6px;
       font-size: 12px;
       font-family: 'Fragment Mono', monospace;
       display: none;
       z-index: 2000;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.25);
     }
   </style>
 </head>
@@ -936,7 +982,7 @@ export function getDashboardHtml(): string {
         <div class="card-header">
           <div class="card-title">
             <span>🌙 Tonight's Deep Work Plan</span>
-            <span style="font-family:'Instrument Serif',serif;font-style:italic;font-size:16px;color:#FFF;text-transform:none;">(11:00 PM – 4:30 AM)</span>
+            <span style="font-family:'Instrument Serif',serif;font-style:italic;font-size:16px;color:#92400E;text-transform:none;">(11:00 PM – 4:30 AM)</span>
           </div>
           <div class="card-badge" id="blocks-count">0 Blocks Scheduled</div>
         </div>
@@ -1270,7 +1316,7 @@ export function getDashboardHtml(): string {
         printContainer.innerHTML = '<div style="font-size:12px;color:var(--emerald);">✓ All coursework printed and submitted.</div>';
       } else {
         printContainer.innerHTML = data.printQueue.items.map(p => {
-          return '<div style="background:#080808;padding:8px 10px;border-radius:4px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">' +
+          return '<div style="background:#FDFBF8;padding:8px 10px;border-radius:4px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">' +
             '<div><div style="font-size:12px;font-weight:500;">' + p.title + '</div><div style="font-size:10px;color:var(--text-muted);">' + p.subject + ' • ' + p.estimatedPages + ' pgs Xerox</div></div>' +
             '<span class="card-badge" style="color:var(--amber);">' + p.stage + '</span>' +
           '</div>';
