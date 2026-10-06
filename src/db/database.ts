@@ -115,6 +115,27 @@ export function initDatabase(customPath?: string): DatabaseSync {
       value_json TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS hackathons (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      organizer TEXT NOT NULL,
+      location TEXT NOT NULL,
+      city_zone TEXT NOT NULL,
+      venue TEXT NOT NULL,
+      mode TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      registration_deadline TEXT NOT NULL,
+      prize_pool TEXT,
+      url TEXT NOT NULL,
+      tags_json TEXT NOT NULL,
+      is_bookmarked INTEGER DEFAULT 0,
+      discovered_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_hackathons_city ON hackathons(city_zone);
+    CREATE INDEX IF NOT EXISTS idx_hackathons_deadline ON hackathons(registration_deadline);
   `);
 
   dbInstance = db;

@@ -1,4 +1,4 @@
-import { Bot, InlineKeyboard, Keyboard } from "grammy";
+import { Bot, InlineKeyboard, Keyboard, type Context } from "grammy";
 import { getEnv } from "../config/env.js";
 import { findPendingTasks, insertTask, updateTaskStatus } from "../db/repositories/taskRepository.js";
 import { advanceStage, inspectPhysicalSubmissionRequirements, registerSubmission } from "../services/submissionService.js";
@@ -9,14 +9,27 @@ import { parseUserIntent } from "../agent/intentParser.js";
 import { decomposeMonolith } from "../agent/taskDecomposer.js";
 import { generateLearnedProfileSummary, recordTaskCompletionVelocity } from "../services/learningService.js";
 import { insertMeal } from "../db/repositories/mealRepository.js";
+import { getUserProfile, setUserProfile } from "../db/repositories/habitRepository.js";
 import { registerEventHandler } from "../scheduler/eventHeartbeat.js";
-import type { SubmissionStage } from "../types/index.js";
+import {
+  findHackathonById,
+  seedInitialCuratedHackathons,
+} from "../db/repositories/hackathonRepository.js";
+import {
+  listUpcomingHackathons,
+  formatHackathonCard,
+  formatHackathonListDigest,
+  toggleHackathonSaved,
+  convertHackathonToTask,
+} from "../services/hackathonService.js";
+import type { CityZone, SubmissionStage } from "../types/index.js";
 
 /**
  * Creates and configures the Grammy Telegram bot instance.
  * @returns Configured Bot instance.
  */
 export function createTelegramBot(): Bot {
+  seedInitialCuratedHackathons();
   const env = getEnv();
   const bot = new Bot(env.TELEGRAM_BOT_TOKEN);
 
@@ -24,6 +37,8 @@ export function createTelegramBot(): Bot {
     .text("📋 What's Next?").text("🍱 Log Meal")
     .row()
     .text("⚠️ Slipped/Late").text("🔄 Plan Tonight")
+    .row()
+    .text("🚀 Hackathons")
     .resized();
 
   // Authentication Guard Middleware
@@ -31,6 +46,10 @@ export function createTelegramBot(): Bot {
     const allowedId = env.TELEGRAM_ALLOWED_USER_ID;
     if (allowedId !== "0" && ctx.from && ctx.from.id.toString() !== allowedId) {
       return; // Ignore unauthorized messages silently
+    }
+    // Auto-bind chat ID for proactive push notifications
+    if (ctx.from) {
+      setUserProfile("telegram_chat_id", ctx.from.id.toString());
     }
     await next();
   });
@@ -113,7 +132,123 @@ export function createTelegramBot(): Bot {
     await ctx.reply(lines.join("\n"), { parse_mode: "Markdown" });
   });
 
+  // Helper to build hackathon filter keyboard
+  const buildHackathonFilterKeyboard = (activeZone?: string): InlineKeyboard => {
+    return new InlineKeyboard()
+      .text(activeZone === "all" ? "• 🌐 All •" : "🌐 All", "hack_zone:all")
+      .text(activeZone === "mumbai" ? "• 📍 Mumbai •" : "📍 Mumbai", "hack_zone:mumbai")
+      .row()
+      .text(activeZone === "thane" ? "• 📍 Thane •" : "📍 Thane", "hack_zone:thane")
+      .text(activeZone === "navimumbai" ? "• 📍 Navi Mumbai •" : "📍 Navi Mumbai", "hack_zone:navimumbai")
+      .row()
+      .text(activeZone === "pune" ? "• 📍 Pune •" : "📍 Pune", "hack_zone:pune")
+      .text(activeZone === "saved" ? "• ⭐ Saved •" : "⭐ Saved", "hack_zone:saved");
+  };
+
+  const displayHackathonList = async (
+    ctx: Context,
+    zoneStr: string = "all",
+    isEdit = false
+  ) => {
+    const isSaved = zoneStr === "saved";
+    const zone = isSaved ? undefined : (zoneStr as CityZone | "all");
+    const hackathons = listUpcomingHackathons(zone, isSaved);
+
+    const title =
+      isSaved
+        ? "Your Bookmarked Hackathons"
+        : zone && zone !== "all"
+        ? `Upcoming Hackathons in ${zone.toUpperCase()}`
+        : "Regional Hackathons (Mumbai, Thane, Navi Mumbai, Pune)";
+
+    const text = formatHackathonListDigest(hackathons, title);
+    const kb = buildHackathonFilterKeyboard(zoneStr);
+
+    if (hackathons.length > 0) {
+      kb.row();
+      for (let i = 0; i < Math.min(hackathons.length, 5); i++) {
+        const h = hackathons[i]!;
+        kb.text(`🔍 #${i + 1}`, `hack_view:${h.id}`);
+      }
+    }
+
+    if (isEdit && ctx.callbackQuery) {
+      await ctx.editMessageText(text, { reply_markup: kb, parse_mode: "Markdown" });
+    } else {
+      await ctx.reply(text, { reply_markup: kb, parse_mode: "Markdown" });
+    }
+  };
+
+  const displayHackathonCard = async (ctx: Context, hackId: string, isEdit = false) => {
+    const hack = findHackathonById(hackId);
+    if (!hack) {
+      if (isEdit && ctx.callbackQuery) {
+        await ctx.editMessageText("Hackathon record not found.");
+      } else {
+        await ctx.reply("Hackathon record not found.");
+      }
+      return;
+    }
+
+    const text = formatHackathonCard(hack);
+    const kb = new InlineKeyboard()
+      .text(hack.isBookmarked ? "⭐ Unsave" : "☆ Save", `hack_star:${hack.id}`)
+      .text("➕ Add to Schedule", `hack_task:${hack.id}`)
+      .row()
+      .text("⬅️ Back to List", `hack_zone:${hack.cityZone}`);
+
+    if (isEdit && ctx.callbackQuery) {
+      await ctx.editMessageText(text, { reply_markup: kb, parse_mode: "Markdown" });
+    } else {
+      await ctx.reply(text, { reply_markup: kb, parse_mode: "Markdown" });
+    }
+  };
+
+  // /hackathons Command & "🚀 Hackathons"
+  bot.command("hackathons", async (ctx) => {
+    await displayHackathonList(ctx, "all");
+  });
+  bot.hears("🚀 Hackathons", async (ctx) => {
+    await displayHackathonList(ctx, "all");
+  });
+
   // Inline Button Callbacks
+  bot.callbackQuery(/^hack_zone:(.+)$/, async (ctx) => {
+    const zoneStr = ctx.match[1] ?? "all";
+    await ctx.answerCallbackQuery();
+    await displayHackathonList(ctx, zoneStr, true);
+  });
+
+  bot.callbackQuery(/^hack_view:(.+)$/, async (ctx) => {
+    const hackId = ctx.match[1]!;
+    await ctx.answerCallbackQuery();
+    await displayHackathonCard(ctx, hackId, true);
+  });
+
+  bot.callbackQuery(/^hack_star:(.+)$/, async (ctx) => {
+    const hackId = ctx.match[1]!;
+    const newStatus = toggleHackathonSaved(hackId);
+    await ctx.answerCallbackQuery({
+      text: newStatus ? "Saved to your bookmarks! ⭐" : "Removed from bookmarks.",
+    });
+    await displayHackathonCard(ctx, hackId, true);
+  });
+
+  bot.callbackQuery(/^hack_task:(.+)$/, async (ctx) => {
+    const hackId = ctx.match[1]!;
+    const task = convertHackathonToTask(hackId);
+    if (task) {
+      await ctx.answerCallbackQuery({ text: "Added to your schedule!" });
+      await ctx.reply(
+        `✅ *Hackathon Task Scheduled!*\n` +
+        `Added "*${task.title}*" (45 mins) to your queue.\n` +
+        `Deadline locked for *${task.deadline}*. Evening schedule updated!`,
+        { parse_mode: "Markdown" }
+      );
+    } else {
+      await ctx.answerCallbackQuery({ text: "Hackathon not found." });
+    }
+  });
   bot.callbackQuery(/^task_done:(.+)$/, async (ctx) => {
     const taskId = ctx.match[1];
     if (taskId) {
@@ -249,6 +384,11 @@ export function createTelegramBot(): Bot {
       return;
     }
 
+    if (parsed.intentType === "FIND_HACKATHONS") {
+      await displayHackathonList(ctx, parsed.cityFilter ?? "all");
+      return;
+    }
+
     if (parsed.intentType === "REPORT_SLIP") {
       const today = new Date().toISOString().slice(0, 10);
       const nowTime = new Date().toTimeString().slice(0, 5);
@@ -262,23 +402,30 @@ export function createTelegramBot(): Bot {
     await ctx.reply(parsed.responseMessage, { parse_mode: "Markdown" });
   });
 
+  const getTargetChatId = (): string | null => {
+    if (env.TELEGRAM_ALLOWED_USER_ID !== "0") {
+      return env.TELEGRAM_ALLOWED_USER_ID;
+    }
+    return getUserProfile<string>("telegram_chat_id");
+  };
+
   // Register scheduler proactive event push to Telegram
-  registerEventHandler("TROUGH_CHECKIN", async (event) => {
-    const allowedId = env.TELEGRAM_ALLOWED_USER_ID;
-    if (allowedId !== "0") {
+  registerEventHandler("TROUGH_CHECKIN", async () => {
+    const targetId = getTargetChatId();
+    if (targetId) {
       await bot.api.sendMessage(
-        allowedId,
+        targetId,
         "👋 **Post-College Transition:** You have ~2 hours before dinner at 9:30 PM. Rest or review printable submissions.",
         { reply_markup: mainKeyboard, parse_mode: "Markdown" }
       );
     }
   });
 
-  registerEventHandler("PRINT_WARNING", async (event) => {
-    const allowedId = env.TELEGRAM_ALLOWED_USER_ID;
-    if (allowedId !== "0") {
+  registerEventHandler("PRINT_WARNING", async () => {
+    const targetId = getTargetChatId();
+    if (targetId) {
       await bot.api.sendMessage(
-        allowedId,
+        targetId,
         "🖨️ **Print Alert:** You have an assignment that requires printing before college tomorrow! Don't leave it until the morning rush.",
         { parse_mode: "Markdown" }
       );

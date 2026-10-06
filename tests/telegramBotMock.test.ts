@@ -10,6 +10,7 @@ describe("Telegram Gateway Full Mock Interaction Suite", () => {
   const authorizedUserId = 12345678;
 
   beforeAll(() => {
+    process.env.AI_PROVIDER = "mock";
     process.env.TELEGRAM_BOT_TOKEN = "TEST_TOKEN";
     process.env.TELEGRAM_ALLOWED_USER_ID = authorizedUserId.toString();
     initDatabase(":memory:");

@@ -97,3 +97,38 @@ export function findFrictionLogs(limit = 20): FrictionLog[] {
     loggedAt: r.logged_at,
   }));
 }
+
+/**
+ * Retrieves a user profile setting or state value.
+ * @param key Profile setting key.
+ * @returns Parsed JSON value or null.
+ */
+export function getUserProfile<T>(key: string): T | null {
+  const db = getDb();
+  const stmt = db.prepare("SELECT value_json FROM user_profile WHERE key = ?");
+  const row = (stmt.get(key) as unknown) as { value_json: string } | undefined;
+  if (!row) return null;
+  try {
+    return JSON.parse(row.value_json) as T;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persists a user profile setting or state value.
+ * @param key Profile setting key.
+ * @param value Setting value to store.
+ */
+export function setUserProfile(key: string, value: unknown): void {
+  const db = getDb();
+  const now = new Date().toISOString();
+  const stmt = db.prepare(`
+    INSERT INTO user_profile (key, value_json, updated_at)
+    VALUES (?, ?, ?)
+    ON CONFLICT(key) DO UPDATE SET
+      value_json = excluded.value_json,
+      updated_at = excluded.updated_at
+  `);
+  stmt.run(key, JSON.stringify(value), now);
+}

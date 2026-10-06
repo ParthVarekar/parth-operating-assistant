@@ -1,8 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { parseUserIntent } from "../src/agent/intentParser.js";
 import { decomposeMonolith } from "../src/agent/taskDecomposer.js";
 
 describe("Agent Intent & Decomposition Layer", () => {
+  beforeAll(() => {
+    process.env.AI_PROVIDER = "mock";
+  });
   it("parses assignment and printable submission intents with heuristics", async () => {
     const raw = "I have an OS lab submission due this Friday, needs 6 pages handwritten and code printout";
     const parsed = await parseUserIntent(raw);

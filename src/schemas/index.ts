@@ -88,6 +88,9 @@ export const ScheduleBlockSchema = z.object({
   createdAt: z.string(),
 });
 
+export const CityZoneSchema = z.enum(["mumbai", "thane", "navimumbai", "pune", "online"]);
+export const HackathonModeSchema = z.enum(["offline", "online", "hybrid"]);
+
 export const ParsedIntentSchema = z.object({
   intentType: z.enum([
     "CREATE_TASK",
@@ -98,6 +101,7 @@ export const ParsedIntentSchema = z.object({
     "QUERY_DAY",
     "LOG_MEAL",
     "PLAN_TONIGHT",
+    "FIND_HACKATHONS",
     "CHAT",
   ]),
   taskTitle: z.string().optional(),
@@ -108,6 +112,7 @@ export const ParsedIntentSchema = z.object({
   subject: z.string().optional(),
   isPrintable: z.boolean().optional(),
   slipMinutes: z.number().int().positive().optional(),
+  cityFilter: CityZoneSchema.optional(),
   responseMessage: z.string(),
 });
 

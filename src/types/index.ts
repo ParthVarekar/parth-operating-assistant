@@ -118,3 +118,24 @@ export interface ScheduledEvent {
   retryCount: number;
   createdAt: string;
 }
+
+export type CityZone = "mumbai" | "thane" | "navimumbai" | "pune" | "online";
+export type HackathonMode = "offline" | "online" | "hybrid";
+
+export interface HackathonRecord {
+  id: string;
+  title: string;
+  organizer: string;
+  location: string;
+  cityZone: CityZone;
+  venue: string;
+  mode: HackathonMode;
+  startDate: string;
+  endDate: string;
+  registrationDeadline: string;
+  prizePool?: string;
+  url: string;
+  tags: string[];
+  isBookmarked: boolean;
+  discoveredAt: string;
+}

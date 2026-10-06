@@ -19,6 +19,11 @@ export function getModelClient(): OpenAI {
   clientInstance = new OpenAI({
     apiKey,
     baseURL: env.AI_BASE_URL,
+    timeout: 10000, // 10s max timeout so user never waits a minute for slow free endpoints
+    defaultHeaders: {
+      "HTTP-Referer": "https://github.com/Parth/personal-assistant",
+      "X-Title": "Personal AI Operating Assistant",
+    },
   });
 
   return clientInstance;
@@ -50,15 +55,18 @@ export async function generateCompletion(request: CompletionRequest): Promise<st
   }
 
   const client = getModelClient();
-  const response = await client.chat.completions.create({
-    model: env.AI_MODEL,
-    messages: [
-      { role: "system", content: request.systemPrompt },
-      { role: "user", content: request.userPrompt },
-    ],
-    response_format: request.responseFormat === "json_object" ? { type: "json_object" } : undefined,
-    temperature: 0.2,
-  });
+  const response = await client.chat.completions.create(
+    {
+      model: env.AI_MODEL,
+      messages: [
+        { role: "system", content: request.systemPrompt },
+        { role: "user", content: request.userPrompt },
+      ],
+      response_format: request.responseFormat === "json_object" ? { type: "json_object" } : undefined,
+      temperature: 0.2,
+    },
+    { timeout: 10000 }
+  );
 
   return response.choices[0]?.message.content ?? "";
 }

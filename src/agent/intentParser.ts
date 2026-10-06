@@ -6,7 +6,7 @@ const SYSTEM_INTENT_PROMPT = `
 You are the natural language intent parser for an engineering student's personal operating assistant.
 Parse the user's message into JSON with the following schema:
 {
-  "intentType": "CREATE_TASK" | "CREATE_SUBMISSION" | "REPORT_SLIP" | "REPORT_DONE" | "QUERY_NEXT" | "QUERY_DAY" | "LOG_MEAL" | "PLAN_TONIGHT" | "CHAT",
+  "intentType": "CREATE_TASK" | "CREATE_SUBMISSION" | "REPORT_SLIP" | "REPORT_DONE" | "QUERY_NEXT" | "QUERY_DAY" | "LOG_MEAL" | "PLAN_TONIGHT" | "FIND_HACKATHONS" | "CHAT",
   "taskTitle": string (optional),
   "estimatedMinutes": number (optional, default 45),
   "category": "assignment" | "coding" | "submission" | "admin" | "study" | "fitness" | "misc" (optional),
@@ -15,6 +15,7 @@ Parse the user's message into JSON with the following schema:
   "subject": string (optional, course name),
   "isPrintable": boolean (optional, true if mentions print/physical/handwritten),
   "slipMinutes": number (optional, if reporting delay),
+  "cityFilter": "mumbai" | "thane" | "navimumbai" | "pune" | "online" (optional),
   "responseMessage": string (brief, empathetic confirmation)
 }
 Only output valid JSON matching this schema.
@@ -22,6 +23,35 @@ Only output valid JSON matching this schema.
 
 function parseFallbackHeuristics(text: string): ParsedIntent {
   const lower = text.toLowerCase();
+
+  // Check for hackathons query
+  if (
+    lower.includes("hackathon") ||
+    lower.includes("hackathons") ||
+    lower.includes("hack ") ||
+    lower.startsWith("hack") ||
+    lower.includes("hackspit") ||
+    lower.includes("mumbaihacks")
+  ) {
+    let zone: "mumbai" | "thane" | "navimumbai" | "pune" | "online" | undefined;
+    if (lower.includes("navi mumbai") || lower.includes("navimumbai") || lower.includes("panvel") || lower.includes("nerul") || lower.includes("vashi")) {
+      zone = "navimumbai";
+    } else if (lower.includes("thane")) {
+      zone = "thane";
+    } else if (lower.includes("pune")) {
+      zone = "pune";
+    } else if (lower.includes("mumbai")) {
+      zone = "mumbai";
+    } else if (lower.includes("online") || lower.includes("virtual")) {
+      zone = "online";
+    }
+
+    return {
+      intentType: "FIND_HACKATHONS",
+      cityFilter: zone,
+      responseMessage: "Fetching upcoming hackathons for you.",
+    };
+  }
 
   // Check for slip or skip
   if (lower.includes("didn't do") || lower.includes("skipped") || lower.includes("late") || lower.includes("slipped")) {
