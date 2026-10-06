@@ -211,6 +211,8 @@ export async function startWhatsAppClient(): Promise<boolean> {
       logger: pino({ level: "silent" }),
       printQRInTerminal: false,
       browser: ["Antigravity Assistant", "Chrome", "1.0.0"],
+      syncFullHistory: false,
+      generateHighQualityLinkPreview: false,
     });
 
     // 🛡️ STRICT READ-ONLY SECURITY GUARD:
