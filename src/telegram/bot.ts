@@ -32,6 +32,7 @@ import {
   formatClassroomStatusDigest,
   syncClassroomAssignments,
 } from "../services/googleClassroomService.js";
+import { ingestProfessorAnnouncement } from "../services/announcementParser.js";
 import type { CityZone, SubmissionStage } from "../types/index.js";
 
 /**
@@ -374,6 +375,49 @@ export function createTelegramBot(): Bot {
     );
   });
 
+  // /prof and /notice Commands
+  bot.command(["prof", "notice"], async (ctx) => {
+    const text = ctx.message?.text?.replace(/^\/(prof|notice)\s*/i, "").trim();
+    if (!text) {
+      await ctx.reply(
+        `📝 *Professor Announcement Ingestion*\n\n` +
+        `Forward or paste any unstructured message from your professor:\n` +
+        `\`/notice Dear students, complete lab experiment 4 in your journals and bring code printouts next Friday.\``,
+        { parse_mode: "Markdown" }
+      );
+      return;
+    }
+
+    await ctx.reply("🧠 Analyzing professor post with academic AI engine...");
+    try {
+      const result = await ingestProfessorAnnouncement(text);
+      if (result.tasksCreated.length === 0) {
+        await ctx.reply("Could not find actionable coursework in this post.");
+        return;
+      }
+
+      const lines = [
+        `📑 *Extracted ${result.tasksCreated.length} Coursework Task(s):*\n`,
+      ];
+      for (const t of result.tasksCreated) {
+        lines.push(`• *${t.title}* (${t.estimatedMinutes}m)`);
+        if (t.deadline) {
+          lines.push(`  🚨 Inferred Target: ${new Date(t.deadline).toLocaleDateString("en-IN")}`);
+        }
+        lines.push(`  📦 Category: \`${t.category}\`\n`);
+      }
+
+      if (result.physicalSubmissionsCount > 0) {
+        lines.push(`🖨️ *${result.physicalSubmissionsCount} item(s) registered for physical/print tracking!*`);
+      }
+
+      lines.push("\nYour operating schedule has been updated!");
+      await ctx.reply(lines.join("\n"), { parse_mode: "Markdown" });
+    } catch (err) {
+      await ctx.reply(`⚠️ Error parsing notice: ${String(err)}`);
+    }
+  });
+
   // Inline Button Callbacks
   bot.callbackQuery(/^hack_zone:(.+)$/, async (ctx) => {
     const zoneStr = ctx.match[1] ?? "all";
@@ -519,6 +563,43 @@ export function createTelegramBot(): Bot {
           await ctx.reply(`❌ Could not sync feed: ${String(err)}`);
           return;
         }
+      }
+    }
+
+    // Auto-detect forwarded professor messages and classroom stream updates
+    const lower = text.toLowerCase();
+    if (
+      lower.includes("dear students") ||
+      lower.includes("students are requested") ||
+      lower.includes("practical turn") ||
+      lower.includes("lab journal") ||
+      lower.includes("journal writeup") ||
+      lower.includes("bring printout") ||
+      lower.includes("bring hard copy")
+    ) {
+      await ctx.reply("🧠 Detected professor announcement! Parsing coursework and submission requirements...");
+      try {
+        const result = await ingestProfessorAnnouncement(text);
+        if (result.tasksCreated.length > 0) {
+          const lines = [
+            `📑 *Extracted ${result.tasksCreated.length} Coursework Task(s):*\n`,
+          ];
+          for (const t of result.tasksCreated) {
+            lines.push(`• *${t.title}* (${t.estimatedMinutes}m)`);
+            if (t.deadline) {
+              lines.push(`  🚨 Inferred Target: ${new Date(t.deadline).toLocaleDateString("en-IN")}`);
+            }
+            lines.push(`  📦 Category: \`${t.category}\`\n`);
+          }
+          if (result.physicalSubmissionsCount > 0) {
+            lines.push(`🖨️ *${result.physicalSubmissionsCount} item(s) tracked in physical submission pipeline!*`);
+          }
+          lines.push("\nYour operating schedule has been updated!");
+          await ctx.reply(lines.join("\n"), { reply_markup: mainKeyboard, parse_mode: "Markdown" });
+          return;
+        }
+      } catch (err) {
+        console.warn("Could not parse professor announcement:", err);
       }
     }
 
