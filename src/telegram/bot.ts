@@ -1,6 +1,7 @@
 import { Bot, InlineKeyboard, Keyboard, type Context } from "grammy";
 import { getEnv } from "../config/env.js";
 import { findPendingTasks, insertTask, updateTaskStatus } from "../db/repositories/taskRepository.js";
+import { findActiveSubmissions } from "../db/repositories/submissionRepository.js";
 import { advanceStage, inspectPhysicalSubmissionRequirements, registerSubmission } from "../services/submissionService.js";
 import { scheduleEveningPlan } from "../planner/intervalScheduler.js";
 import { handleTaskOverrun, handleTaskSkip } from "../planner/replanEngine.js";
@@ -40,6 +41,13 @@ import {
   logQuickPresetMeal,
   logWorkoutSession,
 } from "../services/fitnessService.js";
+import {
+  formatPrintDigest,
+  generatePrintBundle,
+  markAllAsPhysicallyPrinted,
+  markAllAsPackedInBag,
+  getPendingPrintItems,
+} from "../services/printBundlerService.js";
 import type { CityZone, SubmissionStage } from "../types/index.js";
 
 /**
@@ -58,7 +66,7 @@ export function createTelegramBot(): Bot {
     .row()
     .text("🚀 Hackathons").text("📌 Trello Sync")
     .row()
-    .text("🎓 Classroom")
+    .text("🎓 Classroom").text("🖨️ Xerox / Print")
     .resized();
 
   // Authentication Guard Middleware
@@ -133,23 +141,77 @@ export function createTelegramBot(): Bot {
     await ctx.reply(summary, { parse_mode: "Markdown" });
   });
 
-  // /submissions Command
-  bot.command("submissions", async (ctx) => {
-    const physical = inspectPhysicalSubmissionRequirements();
-    const lines: string[] = ["📑 **Physical Submissions Status:**\n"];
+  // /print, /xerox, /submissions Commands & "🖨️ Xerox / Print"
+  const handlePrintCommand = async (ctx: Context) => {
+    const text = formatPrintDigest();
+    const pendingItems = getPendingPrintItems();
+    const active = findActiveSubmissions();
+    const printedNeedsPack = active.filter((s) => s.stage === "printed_physical");
 
-    if (physical.needsPrinting.length === 0 && physical.needsPacking.length === 0) {
-      lines.push("No physical printing or packing steps pending!");
-    } else {
-      for (const p of physical.needsPrinting) {
-        lines.push(`🖨️ **Needs Print:** ${p.subject} (Deadline: ${p.hardDeadline ?? "TBD"})`);
-      }
-      for (const p of physical.needsPacking) {
-        lines.push(`🎒 **In Backpack Needed:** ${p.subject}`);
-      }
+    const kb = new InlineKeyboard();
+    if (pendingItems.length > 0) {
+      kb.text("🖨️ Generate Xerox Bundle", "print_generate_bundle").row();
+      kb.text("✅ Mark All Printed", "print_mark_printed");
+    }
+    if (printedNeedsPack.length > 0) {
+      if (pendingItems.length > 0) kb.row();
+      kb.text("🎒 Mark All Packed in Bag", "print_pack_bag");
     }
 
-    await ctx.reply(lines.join("\n"), { parse_mode: "Markdown" });
+    await ctx.reply(text, {
+      reply_markup: kb.inline_keyboard.length > 0 ? kb : undefined,
+      parse_mode: "Markdown",
+    });
+  };
+
+  bot.command(["print", "xerox", "submissions"], handlePrintCommand);
+  bot.hears("🖨️ Xerox / Print", handlePrintCommand);
+
+  bot.callbackQuery("print_generate_bundle", async (ctx) => {
+    await ctx.answerCallbackQuery({ text: "Generating Xerox bundle & cover sheets..." });
+    try {
+      const bundle = generatePrintBundle();
+      await ctx.reply(
+        `📦 *Print Bundle Ready!*\n\n` +
+        `• *Folder:* \`${bundle.bundleDir}\`\n` +
+        `• *Cover Sheets:* ${bundle.coverPagesCount} generated\n` +
+        `• *Estimated Total Pages:* ~${bundle.totalEstimatedPages} pages (A4 Single-Sided)\n\n` +
+        `*Manifest & Cover Sheets created on disk:*\n` +
+        `Each cover page includes your pre-filled KCCEMSR university details and 30-mark assessment breakdown!\n\n` +
+        `👉 Once you print them at the Xerox shop, tap *Mark All Printed* below.`,
+        {
+          reply_markup: new InlineKeyboard()
+            .text("✅ Mark All Printed", "print_mark_printed")
+            .text("🎒 Pack in Bag", "print_pack_bag"),
+          parse_mode: "Markdown",
+        }
+      );
+    } catch (err) {
+      await ctx.reply(`⚠️ Could not generate bundle: ${String(err)}`);
+    }
+  });
+
+  bot.callbackQuery("print_mark_printed", async (ctx) => {
+    const count = markAllAsPhysicallyPrinted();
+    await ctx.answerCallbackQuery({ text: `Marked ${count} items printed!` });
+    await ctx.reply(
+      `🖨️ *${count} item(s) marked as Printed!*\n\n` +
+      `⚠️ *CRITICAL HABIT CHECK:* Put the printed papers in your backpack RIGHT NOW so you don't forget them in the morning!`,
+      {
+        reply_markup: new InlineKeyboard().text("🎒 Put in Bag (Confirm Packed)", "print_pack_bag"),
+        parse_mode: "Markdown",
+      }
+    );
+  });
+
+  bot.callbackQuery("print_pack_bag", async (ctx) => {
+    const count = markAllAsPackedInBag();
+    await ctx.answerCallbackQuery({ text: `Marked ${count} items safely in bag!` });
+    await ctx.reply(
+      `🎒 *All set! ${count} submission(s) safely packed in your bag.*\n\n` +
+      `You're ready for tomorrow's college turn. Sleep and schedule protected!`,
+      { parse_mode: "Markdown" }
+    );
   });
 
   // Helper to build hackathon filter keyboard
