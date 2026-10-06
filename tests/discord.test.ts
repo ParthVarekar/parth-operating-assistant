@@ -15,6 +15,8 @@ import {
 describe("Discord Integration & Notification Broadcaster Suite", () => {
   beforeAll(() => {
     process.env.DATABASE_PATH = ":memory:";
+    process.env.DISCORD_WEBHOOK_URL = "";
+    process.env.DISCORD_BOT_TOKEN = "";
     initDatabase(":memory:");
   });
 

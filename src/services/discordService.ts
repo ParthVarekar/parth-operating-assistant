@@ -29,7 +29,7 @@ let isBotLoggedIn = false;
  */
 export function getDiscordWebhookUrl(): string {
   const custom = getUserProfile<string>("discord_webhook_url");
-  if (custom && typeof custom === "string" && custom.trim().length > 0) {
+  if (custom !== undefined && custom !== null) {
     return custom.trim();
   }
   const env = getEnv();
@@ -48,7 +48,7 @@ export function setDiscordWebhookUrl(url: string): void {
  */
 export function getDiscordBotToken(): string {
   const custom = getUserProfile<string>("discord_bot_token");
-  if (custom && typeof custom === "string" && custom.trim().length > 0) {
+  if (custom !== undefined && custom !== null) {
     return custom.trim();
   }
   const env = getEnv();

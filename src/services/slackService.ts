@@ -19,7 +19,7 @@ export interface SlackMessageOptions {
  */
 export function getSlackWebhookUrl(): string {
   const custom = getUserProfile<string>("slack_webhook_url");
-  if (custom && typeof custom === "string" && custom.trim().length > 0) {
+  if (custom !== undefined && custom !== null) {
     return custom.trim();
   }
   const env = getEnv();

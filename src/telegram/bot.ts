@@ -70,6 +70,8 @@ import {
   sendDiscordEmbed,
   isDiscordConfigured,
   startDiscordBot,
+  broadcastPlanToDiscord,
+  broadcastTaskDoneToDiscord,
 } from "../services/discordService.js";
 import {
   formatSlackStatusDigest,
@@ -147,6 +149,7 @@ export function createTelegramBot(): Bot {
     const plan = scheduleEveningPlan(tasks, today, nowTime);
     const text = formatPlanMessage(plan);
     await ctx.reply(text, { parse_mode: "Markdown" });
+    broadcastPlanToDiscord(text, plan.blocks.length).catch(() => {});
   };
 
   bot.command("plan", handlePlanCommand);
@@ -1042,9 +1045,14 @@ export function createTelegramBot(): Bot {
     if (taskId) {
       updateTaskStatus(taskId, "completed", 45);
       recordTaskCompletionVelocity("assignment", 45, 45);
+      broadcastTaskDoneToDiscord("Sprint Task", "coding", 45).catch(() => {});
     }
     await ctx.answerCallbackQuery({ text: "Marked done!" });
-    await ctx.editMessageText("🎉 Task completed! Recalculating next priority...");
+    try {
+      await ctx.editMessageText("🎉 Task completed! Recalculating next priority...");
+    } catch {
+      // ignore identical text
+    }
   });
 
   bot.callbackQuery(/^task_slip:(.+):(\d+)$/, async (ctx) => {
@@ -1268,6 +1276,11 @@ export function createTelegramBot(): Bot {
         { parse_mode: "Markdown" }
       );
     }
+    sendDiscordEmbed({
+      title: "🖨️ Physical Print Alert",
+      description: "You have an assignment that requires printing before college tomorrow! Don't leave it until the morning rush.",
+      color: 0xE67E22,
+    }).catch(() => {});
   });
 
   onWhatsAppAcademicNotice(async (alert) => {
@@ -1282,6 +1295,15 @@ export function createTelegramBot(): Bot {
         { reply_markup: mainKeyboard, parse_mode: "Markdown" }
       );
     }
+    sendDiscordEmbed({
+      title: "📲 WhatsApp Academic Notice Captured",
+      description: `**From:** ${alert.chatName} (${alert.sender})\n\n"${alert.text}"`,
+      color: 0x25D366,
+      fields: [
+        { name: "Tasks Added", value: `${alert.tasksCount}`, inline: true },
+        { name: "Print Items", value: `${alert.physicalSubmissionsCount}`, inline: true },
+      ],
+    }).catch(() => {});
   });
 
   onCollegeEmailNotice(async (circular) => {
@@ -1297,6 +1319,16 @@ export function createTelegramBot(): Bot {
         { reply_markup: mainKeyboard, parse_mode: "Markdown" }
       );
     }
+    sendDiscordEmbed({
+      title: `🚨 KCCEMSR Official Circular: ${circular.subject}`,
+      description: circular.snippet,
+      color: 0xE74C3C,
+      fields: [
+        { name: "Sender", value: circular.sender, inline: true },
+        { name: "Category", value: circular.category.toUpperCase(), inline: true },
+        { name: "Deadline", value: circular.inferredDeadline ?? "TBD", inline: true },
+      ],
+    }).catch(() => {});
   });
 
   return bot;
