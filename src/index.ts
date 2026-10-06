@@ -7,6 +7,11 @@ import {
   startWhatsAppClient,
   stopWhatsAppClient,
 } from "./services/whatsappService.js";
+import {
+  getDiscordBotToken,
+  startDiscordBot,
+  stopDiscordBot,
+} from "./services/discordService.js";
 
 async function main() {
   console.log("==================================================");
@@ -32,6 +37,12 @@ async function main() {
     }
   }
 
+  // 2.6 Start Discord bot gateway if configured
+  if (getDiscordBotToken()) {
+    console.log("🤖 Starting Discord bot gateway...");
+    await startDiscordBot();
+  }
+
   // 3. Start Telegram Bot
   const env = getEnv();
   if (env.TELEGRAM_BOT_TOKEN === "MOCK_BOT_TOKEN" || !env.TELEGRAM_BOT_TOKEN) {
@@ -50,6 +61,7 @@ process.on("SIGINT", () => {
   console.log("\n🛑 Received SIGINT. Shutting down gracefully...");
   stopHeartbeat();
   stopWhatsAppClient();
+  stopDiscordBot();
   process.exit(0);
 });
 
@@ -57,6 +69,7 @@ process.on("SIGTERM", () => {
   console.log("\n🛑 Received SIGTERM. Shutting down gracefully...");
   stopHeartbeat();
   stopWhatsAppClient();
+  stopDiscordBot();
   process.exit(0);
 });
 

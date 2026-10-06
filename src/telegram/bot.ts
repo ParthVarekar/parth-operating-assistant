@@ -61,6 +61,29 @@ import {
   disconnectWhatsApp,
   onWhatsAppAcademicNotice,
 } from "../services/whatsappService.js";
+import {
+  formatDiscordStatusDigest,
+  getDiscordWebhookUrl,
+  setDiscordWebhookUrl,
+  getDiscordBotToken,
+  setDiscordBotToken,
+  sendDiscordEmbed,
+  isDiscordConfigured,
+  startDiscordBot,
+} from "../services/discordService.js";
+import {
+  formatSlackStatusDigest,
+  getSlackWebhookUrl,
+  setSlackWebhookUrl,
+  sendSlackNotification,
+} from "../services/slackService.js";
+import {
+  formatCollegeEmailStatusDigest,
+  getCollegeEmailAddress,
+  setCollegeEmailAddress,
+  ingestCollegeEmail,
+  onCollegeEmailNotice,
+} from "../services/collegeEmailService.js";
 import type { CityZone, SubmissionStage } from "../types/index.js";
 
 /**
@@ -71,6 +94,15 @@ export function createTelegramBot(): Bot {
   seedInitialCuratedHackathons();
   const env = getEnv();
   const bot = new Bot(env.TELEGRAM_BOT_TOKEN);
+
+  // Global Error Handler Guard: prevents unhandled rejections from crashing polling daemon
+  bot.catch((err) => {
+    const errorMsg = String(err.error ?? err);
+    if (errorMsg.includes("message is not modified")) {
+      return; // Harmless identical editMessageText callback
+    }
+    console.error("Telegram Bot Caught Error:", err.error ?? err);
+  });
 
   const mainKeyboard = new Keyboard()
     .text("📋 What's Next?").text("🍱 Meals & Gym")
@@ -343,15 +375,272 @@ export function createTelegramBot(): Bot {
     } else {
       kb.text("🔄 Check Link Status", "whatsapp_refresh");
     }
-    await ctx.editMessageText(text, { reply_markup: kb, parse_mode: "Markdown" });
+    try {
+      await ctx.editMessageText(text, { reply_markup: kb, parse_mode: "Markdown" });
+    } catch {
+      // Content already up-to-date
+    }
   });
 
   bot.callbackQuery("whatsapp_disconnect", async (ctx) => {
     disconnectWhatsApp();
     await ctx.answerCallbackQuery({ text: "WhatsApp disconnected." });
-    await ctx.editMessageText(
-      `🚪 *WhatsApp Disconnected.*\n\n` +
-      `Saved credentials have been wiped. Run \`npm run auth:whatsapp\` anytime to re-link.`,
+    try {
+      await ctx.editMessageText(
+        `🚪 *WhatsApp Disconnected.*\n\n` +
+        `Saved credentials have been wiped. Run \`npm run auth:whatsapp\` anytime to re-link.`,
+        { parse_mode: "Markdown" }
+      );
+    } catch {
+      // Content already up-to-date
+    }
+  });
+
+  // /discord, /dc Commands & "🟣 Discord"
+  const handleDiscordCommand = async (ctx: Context) => {
+    const text = formatDiscordStatusDigest();
+    const hasWebhook = getDiscordWebhookUrl().length > 0;
+    const hasToken = getDiscordBotToken().length > 0;
+
+    const kb = new InlineKeyboard();
+    if (hasWebhook || hasToken) {
+      kb.text("📢 Send Test Ping", "discord_test_ping")
+        .text("🔄 Refresh Status", "discord_refresh")
+        .row()
+        .text("🗑️ Clear Config", "discord_clear");
+    } else {
+      kb.text("🔄 Check Status", "discord_refresh");
+    }
+
+    await ctx.reply(text, { reply_markup: kb, parse_mode: "Markdown" });
+  };
+
+  bot.command(["discord", "dc"], handleDiscordCommand);
+
+  bot.command("discord_webhook", async (ctx) => {
+    const url = ctx.message?.text?.replace(/^\/discord_webhook\s*/i, "").trim();
+    if (!url || !url.startsWith("http")) {
+      await ctx.reply(
+        `🟣 *Discord Webhook Setup*\n\n` +
+        `Send your webhook URL from any Discord channel (*Channel Settings > Integrations > Webhooks*):\n` +
+        `\`/discord_webhook https://discord.com/api/webhooks/...\``,
+        { parse_mode: "Markdown" }
+      );
+      return;
+    }
+
+    setDiscordWebhookUrl(url);
+    await ctx.reply("🔗 Discord webhook saved! Sending test verification embed...");
+    const sent = await sendDiscordEmbed({
+      title: "🤖 Antigravity Assistant Connected!",
+      description: "This Discord channel is now linked to Parth's personal operating assistant. Operating plans, sprint milestones, and urgent submission alerts will be broadcast here.",
+      color: 0x5865F2,
+    });
+
+    if (sent) {
+      await ctx.reply("✅ *Verification Successful!* Check your Discord channel for the welcome embed.", {
+        parse_mode: "Markdown",
+      });
+    } else {
+      await ctx.reply("⚠️ Webhook saved, but test ping could not be delivered. Please verify the URL.", {
+        parse_mode: "Markdown",
+      });
+    }
+  });
+
+  bot.command("discord_token", async (ctx) => {
+    const token = ctx.message?.text?.replace(/^\/discord_token\s*/i, "").trim();
+    if (!token) {
+      await ctx.reply(
+        `🤖 *Discord Bot Token Setup*\n\n` +
+        `Create a bot on the Discord Developer Portal and send:\n` +
+        `\`/discord_token <your_bot_token>\``,
+        { parse_mode: "Markdown" }
+      );
+      return;
+    }
+
+    setDiscordBotToken(token);
+    await ctx.reply("🤖 Connecting Discord Bot Gateway...");
+    const started = await startDiscordBot();
+    if (started) {
+      await ctx.reply("✅ *Discord Bot is now Online!* Commands like `!plan`, `!next`, `!sprint`, and `!gym` are now active in your servers.", {
+        parse_mode: "Markdown",
+      });
+    } else {
+      await ctx.reply("⚠️ Saved token, but failed to connect to Discord Gateway. Check bot token permissions.", {
+        parse_mode: "Markdown",
+      });
+    }
+  });
+
+  bot.callbackQuery("discord_refresh", async (ctx) => {
+    await ctx.answerCallbackQuery({ text: "Checking Discord status..." });
+    const text = formatDiscordStatusDigest();
+    const hasWebhook = getDiscordWebhookUrl().length > 0;
+    const hasToken = getDiscordBotToken().length > 0;
+
+    const kb = new InlineKeyboard();
+    if (hasWebhook || hasToken) {
+      kb.text("📢 Send Test Ping", "discord_test_ping")
+        .text("🔄 Refresh Status", "discord_refresh")
+        .row()
+        .text("🗑️ Clear Config", "discord_clear");
+    } else {
+      kb.text("🔄 Check Status", "discord_refresh");
+    }
+
+    try {
+      await ctx.editMessageText(text, { reply_markup: kb, parse_mode: "Markdown" });
+    } catch {
+      // Content identical
+    }
+  });
+
+  bot.callbackQuery("discord_test_ping", async (ctx) => {
+    await ctx.answerCallbackQuery({ text: "Broadcasting ping to Discord..." });
+    const sent = await sendDiscordEmbed({
+      title: "🏓 Operating Assistant Ping",
+      description: "Test broadcast from Telegram assistant! All pipes nominal.",
+      color: 0x2ECC71,
+    });
+    if (sent) {
+      await ctx.reply("✅ Test ping delivered to your Discord channel!");
+    } else {
+      await ctx.reply("❌ Could not deliver ping. Please verify your Discord webhook URL.");
+    }
+  });
+
+  bot.callbackQuery("discord_clear", async (ctx) => {
+    setDiscordWebhookUrl("");
+    setDiscordBotToken("");
+    await ctx.answerCallbackQuery({ text: "Discord settings cleared." });
+    try {
+      await ctx.editMessageText(
+        `🟣 *Discord Disconnected.*\n\n` +
+        `Webhook and bot credentials have been removed.`,
+        { parse_mode: "Markdown" }
+      );
+    } catch {
+      // Content identical
+    }
+  });
+
+  // /slack Command
+  const handleSlackCommand = async (ctx: Context) => {
+    const text = formatSlackStatusDigest();
+    const hasWebhook = getSlackWebhookUrl().length > 0;
+    const kb = new InlineKeyboard();
+    if (hasWebhook) {
+      kb.text("📢 Send Test Ping", "slack_test_ping")
+        .text("🔄 Refresh Status", "slack_refresh")
+        .row()
+        .text("🗑️ Clear Config", "slack_clear");
+    } else {
+      kb.text("🔄 Check Status", "slack_refresh");
+    }
+    await ctx.reply(text, { reply_markup: kb, parse_mode: "Markdown" });
+  };
+
+  bot.command("slack", handleSlackCommand);
+
+  bot.command("slack_webhook", async (ctx) => {
+    const url = ctx.message?.text?.replace(/^\/slack_webhook\s*/i, "").trim();
+    if (!url || !url.startsWith("http")) {
+      await ctx.reply(
+        `🟡 *Slack Webhook Setup*\n\n` +
+        `Send your Slack Incoming Webhook URL:\n` +
+        `\`/slack_webhook https://hooks.slack.com/services/...\``,
+        { parse_mode: "Markdown" }
+      );
+      return;
+    }
+
+    setSlackWebhookUrl(url);
+    await ctx.reply("🔗 Slack webhook saved! Sending verification ping...");
+    const sent = await sendSlackNotification({
+      title: "🤖 Antigravity Assistant Connected!",
+      text: "This Slack channel is now connected to Parth's personal operating assistant. Operating plans, sprint standups, and deadline alerts will appear here.",
+      color: "#36A64F",
+    });
+
+    if (sent) {
+      await ctx.reply("✅ *Verification Successful!* Check your Slack channel for the notification.", {
+        parse_mode: "Markdown",
+      });
+    } else {
+      await ctx.reply("⚠️ Webhook saved, but test ping could not be delivered. Please verify the URL.", {
+        parse_mode: "Markdown",
+      });
+    }
+  });
+
+  bot.callbackQuery("slack_refresh", async (ctx) => {
+    await ctx.answerCallbackQuery({ text: "Checking Slack status..." });
+    const text = formatSlackStatusDigest();
+    const hasWebhook = getSlackWebhookUrl().length > 0;
+    const kb = new InlineKeyboard();
+    if (hasWebhook) {
+      kb.text("📢 Send Test Ping", "slack_test_ping")
+        .text("🔄 Refresh Status", "slack_refresh")
+        .row()
+        .text("🗑️ Clear Config", "slack_clear");
+    } else {
+      kb.text("🔄 Check Status", "slack_refresh");
+    }
+    try {
+      await ctx.editMessageText(text, { reply_markup: kb, parse_mode: "Markdown" });
+    } catch {
+      // Content identical
+    }
+  });
+
+  bot.callbackQuery("slack_test_ping", async (ctx) => {
+    await ctx.answerCallbackQuery({ text: "Sending ping to Slack..." });
+    const sent = await sendSlackNotification({
+      title: "🏓 Operating Assistant Ping",
+      text: "Test notification from Telegram bot! Slack channel bridge is live.",
+      color: "#2B6CB0",
+    });
+    if (sent) {
+      await ctx.reply("✅ Test ping delivered to your Slack channel!");
+    } else {
+      await ctx.reply("❌ Could not deliver ping. Please verify your Slack webhook URL.");
+    }
+  });
+
+  bot.callbackQuery("slack_clear", async (ctx) => {
+    setSlackWebhookUrl("");
+    await ctx.answerCallbackQuery({ text: "Slack webhook cleared." });
+    try {
+      await ctx.editMessageText(`🟡 *Slack Disconnected.*\n\nWebhook URL removed.`, { parse_mode: "Markdown" });
+    } catch {
+      // Content identical
+    }
+  });
+
+  // /email, /college_mail, /mail Commands
+  const handleEmailCommand = async (ctx: Context) => {
+    const text = formatCollegeEmailStatusDigest();
+    const kb = new InlineKeyboard().text("🧪 Test Exam Circular Ingestion", "email_test_circular");
+    await ctx.reply(text, { reply_markup: kb, parse_mode: "Markdown" });
+  };
+
+  bot.command(["email", "college_mail", "mail"], handleEmailCommand);
+
+  bot.callbackQuery("email_test_circular", async (ctx) => {
+    await ctx.answerCallbackQuery({ text: "Simulating official exam circular..." });
+    const circular = await ingestCollegeEmail(
+      "examcell@kccemsr.edu.in",
+      "URGENT: Mumbai University Sem V Exam Form Submission & Hall Ticket Distribution",
+      "All Computer Engineering students must complete online exam forms before 20-10-2026. Bring printed fee receipt to Exam Cell."
+    );
+    await ctx.reply(
+      `✅ *Test Circular Ingested!*\n\n` +
+      `• *Subject:* ${circular?.subject}\n` +
+      `• *Category:* \`${circular?.category}\` (Urgent: ${circular?.isUrgent ? "Yes" : "No"})\n` +
+      `• *Inferred Deadline:* ${circular?.inferredDeadline ?? "None"}\n\n` +
+      `Action item was created and registered into your operating queue!`,
       { parse_mode: "Markdown" }
     );
   });
@@ -990,6 +1279,21 @@ export function createTelegramBot(): Bot {
         `• *Chat:* ${alert.chatName} (${alert.sender})\n` +
         `• *Notice:* "${alert.text.length > 150 ? alert.text.slice(0, 150) + "..." : alert.text}"\n\n` +
         `✅ Extracted *${alert.tasksCount} task(s)* and registered *${alert.physicalSubmissionsCount} physical item(s)* into your operating queue!`,
+        { reply_markup: mainKeyboard, parse_mode: "Markdown" }
+      );
+    }
+  });
+
+  onCollegeEmailNotice(async (circular) => {
+    const targetId = getTargetChatId();
+    if (targetId) {
+      await bot.api.sendMessage(
+        targetId,
+        `🚨 *KCCEMSR Urgent Circular Alert!*\n\n` +
+        `• *Sender:* ${circular.sender}\n` +
+        `• *Subject:* *${circular.subject}*\n` +
+        `• *Details:* "${circular.snippet}"\n\n` +
+        `📌 Registered action item into your schedule with high priority!`,
         { reply_markup: mainKeyboard, parse_mode: "Markdown" }
       );
     }

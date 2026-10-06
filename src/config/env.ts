@@ -17,6 +17,10 @@ const EnvSchema = z.object({
   USER_COLLEGE_RETURN_TIME: z.string().default("19:30"),
   GITHUB_USERNAME: z.string().default("ParthVarekar"),
   GITHUB_TOKEN: z.string().default(""),
+  DISCORD_WEBHOOK_URL: z.string().default(""),
+  DISCORD_BOT_TOKEN: z.string().default(""),
+  DISCORD_CHANNEL_ID: z.string().default(""),
+  SLACK_WEBHOOK_URL: z.string().default(""),
 });
 
 export type EnvConfig = z.infer<typeof EnvSchema>;
