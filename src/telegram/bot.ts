@@ -48,6 +48,13 @@ import {
   markAllAsPackedInBag,
   getPendingPrintItems,
 } from "../services/printBundlerService.js";
+import {
+  formatGitHubDigest,
+  getGitHubActivitySummary,
+  convertRepoToTask,
+  setActiveGitHubUsername,
+  getActiveGitHubUsername,
+} from "../services/githubService.js";
 import type { CityZone, SubmissionStage } from "../types/index.js";
 
 /**
@@ -67,6 +74,8 @@ export function createTelegramBot(): Bot {
     .text("🚀 Hackathons").text("📌 Trello Sync")
     .row()
     .text("🎓 Classroom").text("🖨️ Xerox / Print")
+    .row()
+    .text("🐙 GitHub")
     .resized();
 
   // Authentication Guard Middleware
@@ -210,6 +219,91 @@ export function createTelegramBot(): Bot {
     await ctx.reply(
       `🎒 *All set! ${count} submission(s) safely packed in your bag.*\n\n` +
       `You're ready for tomorrow's college turn. Sleep and schedule protected!`,
+      { parse_mode: "Markdown" }
+    );
+  });
+
+  // /github, /git, /commits Commands & "🐙 GitHub"
+  const handleGitHubCommand = async (ctx: Context) => {
+    await ctx.reply("🐙 Fetching latest GitHub engineering stats & streak...");
+    try {
+      const summary = await getGitHubActivitySummary();
+      const text = formatGitHubDigest(summary);
+      const kb = new InlineKeyboard()
+        .text("🔄 Refresh Activity", "git_refresh")
+        .row();
+
+      if (summary.recentRepos.length > 0) {
+        for (let i = 0; i < Math.min(summary.recentRepos.length, 3); i++) {
+          const r = summary.recentRepos[i]!;
+          kb.text(`💻 Sprint: ${r.name}`, `git_task:${r.name}`).row();
+        }
+      }
+
+      await ctx.reply(text, {
+        reply_markup: kb,
+        parse_mode: "Markdown",
+        link_preview_options: { is_disabled: true },
+      });
+    } catch (err) {
+      await ctx.reply(`⚠️ Could not fetch GitHub activity: ${String(err)}`);
+    }
+  };
+
+  bot.command(["github", "git", "commits"], handleGitHubCommand);
+  bot.hears("🐙 GitHub", handleGitHubCommand);
+
+  bot.command("git_user", async (ctx) => {
+    const username = ctx.message?.text?.replace(/^\/git_user\s*/i, "").trim();
+    if (!username) {
+      await ctx.reply(
+        `🐙 *Current GitHub User:* \`${getActiveGitHubUsername()}\`\n\n` +
+        `To switch, send: \`/git_user <your_github_username>\``,
+        { parse_mode: "Markdown" }
+      );
+      return;
+    }
+    setActiveGitHubUsername(username);
+    await ctx.reply(`✅ GitHub user updated to \`${username}\`! Fetching activity...`, {
+      parse_mode: "Markdown",
+    });
+    await handleGitHubCommand(ctx);
+  });
+
+  bot.callbackQuery("git_refresh", async (ctx) => {
+    await ctx.answerCallbackQuery({ text: "Refreshing GitHub activity..." });
+    try {
+      const summary = await getGitHubActivitySummary();
+      const text = formatGitHubDigest(summary);
+      const kb = new InlineKeyboard()
+        .text("🔄 Refresh Activity", "git_refresh")
+        .row();
+
+      if (summary.recentRepos.length > 0) {
+        for (let i = 0; i < Math.min(summary.recentRepos.length, 3); i++) {
+          const r = summary.recentRepos[i]!;
+          kb.text(`💻 Sprint: ${r.name}`, `git_task:${r.name}`).row();
+        }
+      }
+
+      await ctx.editMessageText(text, {
+        reply_markup: kb,
+        parse_mode: "Markdown",
+        link_preview_options: { is_disabled: true },
+      });
+    } catch (err) {
+      await ctx.reply(`⚠️ Error refreshing GitHub: ${String(err)}`);
+    }
+  });
+
+  bot.callbackQuery(/^git_task:(.+)$/, async (ctx) => {
+    const repoName = ctx.match[1]!;
+    const task = convertRepoToTask(repoName, 45);
+    await ctx.answerCallbackQuery({ text: "Sprint task added to schedule!" });
+    await ctx.reply(
+      `✅ *Engineering Sprint Scheduled!*\n\n` +
+      `Added "*${task.title}*" (45 mins) to your queue.\n` +
+      `Locked into your deep-work block (11:00 PM – 4:30 AM). Schedule updated!`,
       { parse_mode: "Markdown" }
     );
   });

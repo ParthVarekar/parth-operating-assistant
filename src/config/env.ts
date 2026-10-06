@@ -15,6 +15,8 @@ const EnvSchema = z.object({
   USER_SLEEP_TIME: z.string().default("04:30"),
   USER_DEEP_WORK_START: z.string().default("23:00"),
   USER_COLLEGE_RETURN_TIME: z.string().default("19:30"),
+  GITHUB_USERNAME: z.string().default("ParthVarekar"),
+  GITHUB_TOKEN: z.string().default(""),
 });
 
 export type EnvConfig = z.infer<typeof EnvSchema>;
