@@ -171,6 +171,11 @@ export function createTelegramBot(): Bot {
   bot.on("message:text", async (ctx) => {
     const text = ctx.message.text;
 
+    // Ignore unhandled slash commands so they don't get accidentally added as tasks
+    if (text.startsWith("/")) {
+      return;
+    }
+
     // Handle quick buttons
     if (text === "⚠️ Slipped/Late") {
       const today = new Date().toISOString().slice(0, 10);
