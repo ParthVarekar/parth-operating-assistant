@@ -7,11 +7,13 @@
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "test": "vitest run",
-    "auth:trello": "tsx src/integrations/trelloAuth.ts"
+    "auth:trello": "tsx src/integrations/trelloAuth.ts",
+    "auth:whatsapp": "tsx src/integrations/whatsappAuth.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/node": "^26.6.4",
+    "@types/qrcode-terminal": "^0.12.2",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
@@ -20,9 +22,12 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.24",
     "dotenv": "^18.0.5",
     "grammy": "^1.46.0",
     "openai": "^7.28.0",
+    "pino": "^10.4.0",
+    "qrcode-terminal": "^0.12.0",
     "zod": "^4.6.5"
   }
 }

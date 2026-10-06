@@ -2,6 +2,11 @@ import { initDatabase } from "./db/database.js";
 import { getEnv } from "./config/env.js";
 import { createTelegramBot } from "./telegram/bot.js";
 import { startHeartbeat, stopHeartbeat } from "./scheduler/eventHeartbeat.js";
+import {
+  isWhatsAppConfigured,
+  startWhatsAppClient,
+  stopWhatsAppClient,
+} from "./services/whatsappService.js";
 
 async function main() {
   console.log("==================================================");
@@ -17,6 +22,15 @@ async function main() {
   console.log("⏱️ Starting proactive scheduler heartbeat (15s tick)...");
   startHeartbeat(15000);
   console.log("✅ Scheduler heartbeat active.");
+
+  // 2.5 Start WhatsApp background listener if linked
+  if (isWhatsAppConfigured()) {
+    console.log("📲 Initializing WhatsApp background listener...");
+    const started = await startWhatsAppClient();
+    if (started) {
+      console.log("✅ WhatsApp background listener connected.");
+    }
+  }
 
   // 3. Start Telegram Bot
   const env = getEnv();
@@ -35,12 +49,14 @@ async function main() {
 process.on("SIGINT", () => {
   console.log("\n🛑 Received SIGINT. Shutting down gracefully...");
   stopHeartbeat();
+  stopWhatsAppClient();
   process.exit(0);
 });
 
 process.on("SIGTERM", () => {
   console.log("\n🛑 Received SIGTERM. Shutting down gracefully...");
   stopHeartbeat();
+  stopWhatsAppClient();
   process.exit(0);
 });
 

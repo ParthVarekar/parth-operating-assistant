@@ -55,6 +55,12 @@ import {
   setActiveGitHubUsername,
   getActiveGitHubUsername,
 } from "../services/githubService.js";
+import {
+  formatWhatsAppStatusDigest,
+  getWhatsAppStatus,
+  disconnectWhatsApp,
+  onWhatsAppAcademicNotice,
+} from "../services/whatsappService.js";
 import type { CityZone, SubmissionStage } from "../types/index.js";
 
 /**
@@ -75,7 +81,7 @@ export function createTelegramBot(): Bot {
     .row()
     .text("🎓 Classroom").text("🖨️ Xerox / Print")
     .row()
-    .text("🐙 GitHub")
+    .text("🐙 GitHub").text("📱 WhatsApp")
     .resized();
 
   // Authentication Guard Middleware
@@ -304,6 +310,48 @@ export function createTelegramBot(): Bot {
       `✅ *Engineering Sprint Scheduled!*\n\n` +
       `Added "*${task.title}*" (45 mins) to your queue.\n` +
       `Locked into your deep-work block (11:00 PM – 4:30 AM). Schedule updated!`,
+      { parse_mode: "Markdown" }
+    );
+  });
+
+  // /whatsapp, /wa Commands & "📱 WhatsApp"
+  const handleWhatsAppCommand = async (ctx: Context) => {
+    const text = formatWhatsAppStatusDigest();
+    const status = getWhatsAppStatus();
+    const kb = new InlineKeyboard();
+    if (status.isConfigured) {
+      kb.text("🔄 Refresh Status", "whatsapp_refresh")
+        .text("🚪 Disconnect", "whatsapp_disconnect");
+    } else {
+      kb.text("🔄 Check Link Status", "whatsapp_refresh");
+    }
+
+    await ctx.reply(text, { reply_markup: kb, parse_mode: "Markdown" });
+  };
+
+  bot.command(["whatsapp", "wa"], handleWhatsAppCommand);
+  bot.hears("📱 WhatsApp", handleWhatsAppCommand);
+
+  bot.callbackQuery("whatsapp_refresh", async (ctx) => {
+    await ctx.answerCallbackQuery({ text: "Checking WhatsApp status..." });
+    const text = formatWhatsAppStatusDigest();
+    const status = getWhatsAppStatus();
+    const kb = new InlineKeyboard();
+    if (status.isConfigured) {
+      kb.text("🔄 Refresh Status", "whatsapp_refresh")
+        .text("🚪 Disconnect", "whatsapp_disconnect");
+    } else {
+      kb.text("🔄 Check Link Status", "whatsapp_refresh");
+    }
+    await ctx.editMessageText(text, { reply_markup: kb, parse_mode: "Markdown" });
+  });
+
+  bot.callbackQuery("whatsapp_disconnect", async (ctx) => {
+    disconnectWhatsApp();
+    await ctx.answerCallbackQuery({ text: "WhatsApp disconnected." });
+    await ctx.editMessageText(
+      `🚪 *WhatsApp Disconnected.*\n\n` +
+      `Saved credentials have been wiped. Run \`npm run auth:whatsapp\` anytime to re-link.`,
       { parse_mode: "Markdown" }
     );
   });
@@ -929,6 +977,20 @@ export function createTelegramBot(): Bot {
         targetId,
         "🖨️ **Print Alert:** You have an assignment that requires printing before college tomorrow! Don't leave it until the morning rush.",
         { parse_mode: "Markdown" }
+      );
+    }
+  });
+
+  onWhatsAppAcademicNotice(async (alert) => {
+    const targetId = getTargetChatId();
+    if (targetId) {
+      await bot.api.sendMessage(
+        targetId,
+        `📲 *WhatsApp Academic Notice Captured!*\n\n` +
+        `• *Chat:* ${alert.chatName} (${alert.sender})\n` +
+        `• *Notice:* "${alert.text.length > 150 ? alert.text.slice(0, 150) + "..." : alert.text}"\n\n` +
+        `✅ Extracted *${alert.tasksCount} task(s)* and registered *${alert.physicalSubmissionsCount} physical item(s)* into your operating queue!`,
+        { reply_markup: mainKeyboard, parse_mode: "Markdown" }
       );
     }
   });
