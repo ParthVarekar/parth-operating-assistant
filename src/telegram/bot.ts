@@ -22,6 +22,12 @@ import {
   toggleHackathonSaved,
   convertHackathonToTask,
 } from "../services/hackathonService.js";
+import {
+  formatTrelloStatusDigest,
+  getTrelloAccessToken,
+  syncTrelloBoard,
+  getTrelloBoards,
+} from "../services/trelloService.js";
 import type { CityZone, SubmissionStage } from "../types/index.js";
 
 /**
@@ -38,7 +44,7 @@ export function createTelegramBot(): Bot {
     .row()
     .text("⚠️ Slipped/Late").text("🔄 Plan Tonight")
     .row()
-    .text("🚀 Hackathons")
+    .text("🚀 Hackathons").text("📌 Trello Sync")
     .resized();
 
   // Authentication Guard Middleware
@@ -210,6 +216,88 @@ export function createTelegramBot(): Bot {
   });
   bot.hears("🚀 Hackathons", async (ctx) => {
     await displayHackathonList(ctx, "all");
+  });
+
+  // /trello Command & "📌 Trello Sync"
+  const handleTrelloCommand = async (ctx: Context) => {
+    const text = await formatTrelloStatusDigest();
+    const token = getTrelloAccessToken();
+    const kb = new InlineKeyboard();
+    if (token) {
+      kb.text("🔄 Sync Cards Now", "trello_sync")
+        .row()
+        .text("📂 Select Board", "trello_select_board");
+    } else {
+      kb.text("🔑 How to Connect", "trello_auth_help");
+    }
+    await ctx.reply(text, { reply_markup: kb, parse_mode: "Markdown" });
+  };
+
+  bot.command("trello", handleTrelloCommand);
+  bot.hears("📌 Trello Sync", handleTrelloCommand);
+
+  bot.callbackQuery("trello_sync", async (ctx) => {
+    await ctx.answerCallbackQuery({ text: "Syncing with Trello..." });
+    try {
+      const result = await syncTrelloBoard();
+      await ctx.reply(
+        `✅ *Trello Sync Complete!*\n` +
+        `• *Board:* ${result.boardName}\n` +
+        `• *Tasks Synced:* ${result.syncedTasksCount}\n` +
+        `• *Submissions Registered:* ${result.newSubmissionsCount}\n` +
+        `• *Completed Tasks:* ${result.completedTasksCount}\n\n` +
+        `Your evening schedule and 8-stage pipeline have been updated!`,
+        { parse_mode: "Markdown" }
+      );
+    } catch (err) {
+      await ctx.reply(`⚠️ *Trello Sync Failed:* ${String(err)}`);
+    }
+  });
+
+  bot.callbackQuery("trello_select_board", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    try {
+      const boards = await getTrelloBoards();
+      if (boards.length === 0) {
+        await ctx.reply("No open Trello boards found on your account.");
+        return;
+      }
+      const kb = new InlineKeyboard();
+      for (const b of boards.slice(0, 8)) {
+        kb.text(`📋 ${b.name}`, `trello_set_board:${b.id}`).row();
+      }
+      await ctx.reply("Select the active board to sync with your schedule:", {
+        reply_markup: kb,
+      });
+    } catch (err) {
+      await ctx.reply(`⚠️ Could not fetch boards: ${String(err)}`);
+    }
+  });
+
+  bot.callbackQuery(/^trello_set_board:(.+)$/, async (ctx) => {
+    const boardId = ctx.match[1]!;
+    await ctx.answerCallbackQuery({ text: "Board selected!" });
+    try {
+      const result = await syncTrelloBoard(boardId);
+      await ctx.reply(
+        `✅ *Active Board Set:* ${result.boardName}\n` +
+        `Synced ${result.syncedTasksCount} tasks into your schedule!`,
+        { parse_mode: "Markdown" }
+      );
+    } catch (err) {
+      await ctx.reply(`⚠️ Error syncing board: ${String(err)}`);
+    }
+  });
+
+  bot.callbackQuery("trello_auth_help", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await ctx.reply(
+      `🔑 *Connecting Trello:*\n\n` +
+      `Run this single command in your terminal:\n` +
+      `\`npm run auth:trello\`\n\n` +
+      `It will automatically open your browser to authorize your account. Once done, tap *📌 Trello Sync* again!`,
+      { parse_mode: "Markdown" }
+    );
   });
 
   // Inline Button Callbacks
