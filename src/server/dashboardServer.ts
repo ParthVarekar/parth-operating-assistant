@@ -287,24 +287,24 @@ export function getDashboardHtml(): string {
   <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono:ital@0;1&family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #FAF7F2;
+      --bg: #F8F5EE;
       --bg-card: #FFFFFF;
-      --bg-card-hover: #FCFBF9;
-      --bg-card-subtle: #F4EFE6;
-      --border: #E8E2D8;
-      --border-hover: #D8D0C3;
-      --border-accent: #C4B9A7;
+      --bg-card-hover: #FCFAF6;
+      --bg-surface: #F5F1E8;
+      --border: #E6DFD3;
+      --border-hover: #D5CCC0;
+      --border-accent: #C2B6A6;
       --text: #1C1917;
       --text-muted: #78716C;
       --text-dim: #A8A29E;
       --emerald: #15803D;
-      --emerald-glow: rgba(21, 128, 61, 0.12);
-      --amber: #D97706;
-      --amber-glow: rgba(217, 119, 6, 0.12);
-      --terracotta: #C2410C;
-      --radius: 12px;
-      --shadow-sm: 0 1px 2px rgba(60, 45, 30, 0.04);
-      --shadow-card: 0 1px 3px rgba(60, 45, 30, 0.04), 0 8px 24px -4px rgba(60, 45, 30, 0.04);
+      --emerald-bg: rgba(21, 128, 61, 0.08);
+      --emerald-border: rgba(21, 128, 61, 0.25);
+      --amber: #B45309;
+      --amber-bg: rgba(180, 83, 9, 0.08);
+      --amber-border: rgba(180, 83, 9, 0.25);
+      --radius: 8px;
+      --shadow: 0 1px 3px rgba(40, 30, 20, 0.03), 0 4px 12px rgba(40, 30, 20, 0.02);
     }
 
     * {
@@ -318,111 +318,136 @@ export function getDashboardHtml(): string {
       color: var(--text);
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       min-height: 100vh;
-      line-height: 1.5;
+      line-height: 1.45;
+      font-size: 13px;
       -webkit-font-smoothing: antialiased;
       background-image: 
-        radial-gradient(circle at 50% 0%, #FFFDF9 0%, #FAF7F2 85%),
-        linear-gradient(to right, rgba(120, 100, 80, 0.035) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(120, 100, 80, 0.035) 1px, transparent 1px);
-      background-size: 100% 100%, 36px 36px, 36px 36px;
+        radial-gradient(circle at 50% 0%, #FFFDF9 0%, #F8F5EE 85%),
+        linear-gradient(to right, rgba(140, 120, 100, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(140, 120, 100, 0.03) 1px, transparent 1px);
+      background-size: 100% 100%, 32px 32px, 32px 32px;
     }
+
+    /* Custom Sleek Scrollbar */
+    .scroll-box::-webkit-scrollbar { width: 4px; height: 4px; }
+    .scroll-box::-webkit-scrollbar-track { background: transparent; }
+    .scroll-box::-webkit-scrollbar-thumb { background: #DDD6CB; border-radius: 4px; }
+    .scroll-box::-webkit-scrollbar-thumb:hover { background: #BDB2A1; }
 
     .container {
-      max-width: 1320px;
+      max-width: 1260px;
       margin: 0 auto;
-      padding: 36px 24px 64px 24px;
+      padding: 24px 20px 48px 20px;
     }
 
-    /* Top Nav / Identity Bar */
+    /* Header & Navigation */
     header {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 36px;
-      padding-bottom: 24px;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
       border-bottom: 1px solid var(--border);
       flex-wrap: wrap;
-      gap: 20px;
+      gap: 16px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      flex-wrap: wrap;
     }
 
     .brand-title {
-      font-size: 21px;
-      font-weight: 600;
-      letter-spacing: -0.02em;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
       color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .brand-title .serif-flair {
       font-family: 'Instrument Serif', Georgia, serif;
       font-style: italic;
-      font-size: 27px;
+      font-size: 21px;
       font-weight: 400;
       color: #92400E;
     }
 
-    .brand-sub {
+    .brand-meta {
       font-family: 'Fragment Mono', monospace;
-      font-size: 11px;
+      font-size: 10px;
       color: var(--text-muted);
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      margin-top: 4px;
+      letter-spacing: 0.04em;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      padding: 2px 8px;
+      border-radius: 4px;
     }
 
-    .header-right {
+    .header-indicators {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 10px;
       flex-wrap: wrap;
     }
 
-    .status-pill {
+    .chip {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 6px 14px;
+      gap: 6px;
+      padding: 4px 10px;
       background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: 9999px;
+      border-radius: 6px;
       font-family: 'Fragment Mono', monospace;
       font-size: 11px;
       color: var(--text);
-      box-shadow: var(--shadow-sm);
+      box-shadow: 0 1px 2px rgba(40, 30, 20, 0.02);
     }
 
     .pulse-dot {
-      width: 7px;
-      height: 7px;
+      width: 6px;
+      height: 6px;
       background: var(--emerald);
       border-radius: 50%;
-      box-shadow: 0 0 8px rgba(21, 128, 61, 0.4);
+      box-shadow: 0 0 6px rgba(21, 128, 61, 0.4);
       animation: pulse 2s infinite ease-in-out;
     }
 
     @keyframes pulse {
       0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
+      50% { opacity: 0.35; transform: scale(0.85); }
     }
 
-    .clock-display {
+    .clock-chip {
       font-family: 'Fragment Mono', monospace;
-      font-size: 13px;
+      font-size: 11px;
       color: #44403C;
-      background: #F4EFE6;
-      padding: 6px 14px;
-      border-radius: 6px;
+      background: var(--bg-surface);
       border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 6px;
       font-weight: 500;
     }
 
     /* Actions Bar */
     .action-bar {
       display: flex;
-      gap: 10px;
-      margin-bottom: 28px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       flex-wrap: wrap;
     }
 
@@ -430,9 +455,9 @@ export function getDashboardHtml(): string {
       background: var(--bg-card);
       color: var(--text);
       border: 1px solid var(--border);
-      padding: 8px 16px;
+      padding: 5px 12px;
       border-radius: 6px;
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 500;
       cursor: pointer;
       display: inline-flex;
@@ -440,14 +465,13 @@ export function getDashboardHtml(): string {
       gap: 6px;
       transition: all 0.15s ease;
       text-decoration: none;
-      box-shadow: var(--shadow-sm);
+      box-shadow: 0 1px 2px rgba(40, 30, 20, 0.02);
     }
 
     .btn:hover {
-      background: #FDFCF9;
+      background: var(--bg-card-hover);
       border-color: var(--border-hover);
       transform: translateY(-1px);
-      box-shadow: 0 3px 8px rgba(60, 45, 30, 0.06);
     }
 
     .btn-primary {
@@ -455,406 +479,458 @@ export function getDashboardHtml(): string {
       color: #FAF7F2;
       border-color: #1C1917;
       font-weight: 600;
-      box-shadow: 0 2px 6px rgba(28, 25, 23, 0.15);
     }
 
     .btn-primary:hover {
-      background: #292524;
-      border-color: #292524;
+      background: #2E2A27;
+      border-color: #2E2A27;
       color: #FAF7F2;
     }
 
-    /* Phase Banner */
+    /* Compact Phase Banner */
     .phase-banner {
       background: var(--bg-card);
       border: 1px solid var(--border);
+      border-left: 3px solid var(--amber);
       border-radius: var(--radius);
-      padding: 18px 24px;
+      padding: 10px 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 28px;
-      position: relative;
-      overflow: hidden;
-      box-shadow: var(--shadow-card);
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
     }
 
-    .phase-banner::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 4px;
-      background: var(--amber);
-    }
-
-    .phase-info h2 {
-      font-size: 16px;
+    .phase-title {
+      font-size: 13px;
       font-weight: 600;
+      color: var(--text);
       display: flex;
       align-items: center;
-      gap: 8px;
-      color: var(--text);
+      gap: 6px;
     }
 
-    .phase-info p {
-      font-size: 13px;
+    .phase-desc {
+      font-size: 11.5px;
       color: var(--text-muted);
-      margin-top: 2px;
     }
 
     /* Bento Grid */
     .bento-grid {
       display: grid;
       grid-template-columns: repeat(12, 1fr);
-      gap: 20px;
+      gap: 16px;
     }
 
     .col-12 { grid-column: span 12; }
-    .col-8 { grid-column: span 8; }
-    .col-6 { grid-column: span 6; }
-    .col-4 { grid-column: span 4; }
+    .col-8  { grid-column: span 8; }
+    .col-7  { grid-column: span 7; }
+    .col-5  { grid-column: span 5; }
+    .col-4  { grid-column: span 4; }
 
     @media (max-width: 1024px) {
-      .col-8, .col-6, .col-4 { grid-column: span 12; }
+      .col-8, .col-7, .col-5, .col-4 { grid-column: span 12; }
+      .fixed-tier-1, .fixed-tier-2, .fixed-tier-3 { height: auto !important; }
     }
 
-    /* Card Styling */
+    /* Standard Card */
     .card {
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 24px;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+      padding: 16px 18px;
       display: flex;
       flex-direction: column;
-      box-shadow: var(--shadow-card);
+      box-shadow: var(--shadow);
+      transition: border-color 0.15s ease;
     }
 
     .card:hover {
       border-color: var(--border-hover);
-      box-shadow: 0 4px 12px rgba(60, 45, 30, 0.06), 0 12px 28px -6px rgba(60, 45, 30, 0.05);
     }
 
     .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #F0EAE1;
     }
 
     .card-title {
-      font-size: 13px;
+      font-size: 11.5px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #78716C;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
       font-family: 'Fragment Mono', monospace;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
 
     .card-badge {
       font-family: 'Fragment Mono', monospace;
-      font-size: 11px;
-      padding: 3px 8px;
+      font-size: 10px;
+      padding: 2px 6px;
       border-radius: 4px;
-      background: var(--bg-card-subtle);
+      background: var(--bg-surface);
       border: 1px solid var(--border);
-      color: #57534E;
-    }
-
-    /* Schedule Blocks list */
-    .schedule-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      flex: 1;
-    }
-
-    .schedule-block {
-      background: #FDFBF8;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      transition: all 0.15s ease;
-    }
-
-    .schedule-block:hover {
-      border-color: var(--border-hover);
-      background: #FFFFFF;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .schedule-time {
-      font-family: 'Fragment Mono', monospace;
-      font-size: 12px;
-      color: #92400E;
-      font-weight: 600;
-      white-space: nowrap;
-      min-width: 96px;
-    }
-
-    .schedule-desc {
-      font-size: 13px;
-      font-weight: 500;
-      flex: 1;
-      color: var(--text);
-    }
-
-    .schedule-status {
-      font-family: 'Fragment Mono', monospace;
-      font-size: 11px;
-      text-transform: uppercase;
-      padding: 2px 8px;
-      border-radius: 4px;
-      background: #F4EFE6;
       color: var(--text-muted);
     }
 
-    .schedule-status.completed {
-      background: rgba(22, 163, 74, 0.1);
-      color: #15803D;
-      border: 1px solid rgba(22, 163, 74, 0.3);
+    /* Height Lock Classes for Crisp Alignment */
+    .fixed-tier-1 { height: 330px; }
+    .fixed-tier-2 { height: 280px; }
+    .fixed-tier-3 { height: 340px; }
+
+    /* Timeline / Schedule Blocks */
+    .timeline-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .timeline-row {
+      background: #FAF8F5;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      transition: all 0.15s ease;
+    }
+
+    .timeline-row:hover {
+      background: #FFFFFF;
+      border-color: var(--border-hover);
+    }
+
+    .time-slot {
+      font-family: 'Fragment Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: #92400E;
+      min-width: 86px;
+    }
+
+    .time-title {
+      font-size: 12px;
+      font-weight: 500;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .status-tag {
+      font-family: 'Fragment Mono', monospace;
+      font-size: 9.5px;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--bg-surface);
+      color: var(--text-muted);
+      border: 1px solid transparent;
+    }
+
+    .status-tag.completed {
+      background: var(--emerald-bg);
+      color: var(--emerald);
+      border-color: var(--emerald-border);
     }
 
     /* Fitness Meters */
-    .meter-container {
-      margin-bottom: 18px;
+    .fitness-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
     }
 
-    .meter-header {
+    .meter-item {
+      margin-bottom: 12px;
+    }
+
+    .meter-label {
       display: flex;
       justify-content: space-between;
-      font-size: 12px;
-      margin-bottom: 6px;
-    }
-
-    .meter-title {
-      color: var(--text-muted);
+      font-size: 11px;
+      margin-bottom: 4px;
       font-family: 'Fragment Mono', monospace;
     }
 
-    .meter-val {
-      font-weight: 600;
-      color: var(--text);
+    .meter-track {
+      height: 7px;
+      background: #EAE3D7;
+      border-radius: 9999px;
+      overflow: hidden;
     }
 
     .meter-bar {
-      height: 8px;
-      background: #EDE6DA;
-      border-radius: 9999px;
-      overflow: hidden;
-      position: relative;
-    }
-
-    .meter-fill {
       height: 100%;
       border-radius: 9999px;
-      transition: width 0.4s ease;
+      transition: width 0.3s ease;
     }
 
-    .fill-protein {
+    .meter-bar.protein {
       background: linear-gradient(90deg, #15803D, #22C55E);
-      box-shadow: 0 0 10px rgba(22, 163, 74, 0.25);
     }
 
-    .fill-calories {
-      background: linear-gradient(90deg, #D97706, #F59E0B);
-      box-shadow: 0 0 10px rgba(217, 119, 6, 0.25);
+    .meter-bar.calories {
+      background: linear-gradient(90deg, #B45309, #F59E0B);
     }
 
-    .presets-row {
+    .preset-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-      margin-top: 16px;
+      gap: 6px;
+      margin-top: 8px;
     }
 
-    .preset-btn {
-      background: #FAF7F2;
+    .preset-chip {
+      background: #FAF8F5;
       border: 1px solid var(--border);
       border-radius: 6px;
-      padding: 8px 10px;
+      padding: 6px 8px;
       text-align: left;
       cursor: pointer;
       color: var(--text);
-      transition: all 0.15s ease;
-    }
-
-    .preset-btn:hover {
-      background: #FFFFFF;
-      border-color: var(--border-hover);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .preset-btn .p-name {
-      font-size: 11px;
-      font-weight: 500;
-      display: block;
-      color: var(--text);
-    }
-
-    .preset-btn .p-sub {
-      font-family: 'Fragment Mono', monospace;
-      font-size: 10px;
-      color: #15803D;
-      font-weight: 600;
-    }
-
-    /* Hubs Grid */
-    .hub-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .hub-item {
-      background: #FDFBF8;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 10px;
       transition: all 0.15s ease;
     }
 
-    .hub-item:hover {
-      border-color: var(--border-hover);
+    .preset-chip:hover {
       background: #FFFFFF;
+      border-color: var(--border-hover);
     }
 
-    .hub-item .hub-name {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text);
-    }
-
-    .hub-item .hub-desc {
+    .preset-chip .p-name {
       font-size: 11px;
-      color: var(--text-muted);
+      font-weight: 500;
     }
 
-    .hub-tag {
+    .preset-chip .p-val {
       font-family: 'Fragment Mono', monospace;
       font-size: 10px;
-      padding: 2px 8px;
-      border-radius: 4px;
-      text-transform: uppercase;
-    }
-
-    .tag-active {
-      background: rgba(22, 163, 74, 0.1);
-      color: #15803D;
-      border: 1px solid rgba(22, 163, 74, 0.3);
+      color: var(--emerald);
       font-weight: 600;
     }
 
-    .tag-neutral {
-      background: #F4EFE6;
+    /* Print & Backpack */
+    .sub-section-title {
+      font-family: 'Fragment Mono', monospace;
+      font-size: 10px;
       color: var(--text-muted);
-      border: 1px solid var(--border);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .checklist-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      color: var(--text);
+      margin-bottom: 3px;
     }
 
     /* Hackathons */
-    .hackathon-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .hackathon-item {
-      background: #FDFBF8;
+    .hackathon-row {
+      background: #FAF8F5;
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
+      border-radius: 6px;
+      padding: 7px 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
+      margin-bottom: 6px;
       transition: all 0.15s ease;
     }
 
-    .hackathon-item:hover {
+    .hackathon-row:hover {
+      background: #FFFFFF;
+      border-color: var(--border-hover);
+    }
+
+    .hack-name {
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 190px;
+    }
+
+    .hack-sub {
+      font-family: 'Fragment Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* Hubs */
+    .hub-row {
+      background: #FAF8F5;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+
+    .hub-title {
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .hub-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* Task Manager */
+    .task-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 4px;
+    }
+
+    .filter-tab {
+      background: transparent;
+      border: 1px solid transparent;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-family: 'Fragment Mono', monospace;
+    }
+
+    .filter-tab.active {
+      background: var(--bg-surface);
+      border-color: var(--border);
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .task-search-input {
+      background: #FAF8F5;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 11px;
+      color: var(--text);
+      width: 140px;
+    }
+
+    .task-search-input:focus {
+      outline: none;
       border-color: var(--border-hover);
       background: #FFFFFF;
     }
 
-    .hack-title {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text);
-    }
-
-    .hack-meta {
-      font-family: 'Fragment Mono', monospace;
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    /* Tasks table */
-    .task-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
     .task-row {
-      background: #FDFBF8;
+      background: #FAF8F5;
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 14px;
+      border-radius: 6px;
+      padding: 6px 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
+      margin-bottom: 5px;
       transition: all 0.15s ease;
     }
 
     .task-row:hover {
-      border-color: var(--border-hover);
       background: #FFFFFF;
+      border-color: var(--border-hover);
     }
 
-    .task-title {
-      font-size: 13px;
+    .task-main {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .priority-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .pri-urgent { background: #DC2626; box-shadow: 0 0 4px rgba(220, 38, 38, 0.4); }
+    .pri-high   { background: #D97706; }
+    .pri-medium { background: #4F46E5; }
+    .pri-low    { background: #9CA3AF; }
+
+    .task-name {
+      font-size: 12px;
       font-weight: 500;
-      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .task-meta {
+    .task-meta-tag {
+      font-family: 'Fragment Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    /* Telemetry Table */
+    .telemetry-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid #F0EAE1;
       font-family: 'Fragment Mono', monospace;
       font-size: 11px;
+    }
+
+    .telemetry-row:last-child {
+      border-bottom: none;
+    }
+
+    .telemetry-key {
       color: var(--text-muted);
     }
 
-    .priority-badge {
-      font-family: 'Fragment Mono', monospace;
-      font-size: 10px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      text-transform: uppercase;
-      font-weight: 600;
+    .telemetry-val {
+      font-weight: 500;
+      color: var(--text);
     }
-
-    .pri-urgent { background: rgba(220, 38, 38, 0.1); color: #B91C1C; border: 1px solid rgba(220, 38, 38, 0.3); }
-    .pri-high { background: rgba(217, 119, 6, 0.1); color: #B45309; border: 1px solid rgba(217, 119, 6, 0.3); }
-    .pri-medium { background: rgba(79, 70, 229, 0.1); color: #4338CA; border: 1px solid rgba(79, 70, 229, 0.3); }
 
     /* Modal Form */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(50, 40, 30, 0.45);
+      background: rgba(40, 30, 20, 0.4);
       backdrop-filter: blur(4px);
       display: none;
       align-items: center;
@@ -865,32 +941,31 @@ export function getDashboardHtml(): string {
     .modal {
       background: #FFFFFF;
       border: 1px solid var(--border);
-      border-radius: 14px;
+      border-radius: 10px;
       width: 90%;
-      max-width: 480px;
-      padding: 28px;
-      box-shadow: 0 20px 40px -10px rgba(60, 45, 30, 0.15);
+      max-width: 440px;
+      padding: 22px;
+      box-shadow: 0 16px 36px -8px rgba(40, 25, 10, 0.15);
     }
 
     .modal-title {
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 600;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      color: var(--text);
     }
 
     .form-group {
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
 
     .form-label {
       display: block;
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-muted);
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       font-family: 'Fragment Mono', monospace;
     }
 
@@ -899,10 +974,9 @@ export function getDashboardHtml(): string {
       background: #FAF8F5;
       border: 1px solid var(--border);
       border-radius: 6px;
-      padding: 9px 12px;
+      padding: 7px 10px;
       color: var(--text);
-      font-size: 13px;
-      transition: all 0.15s ease;
+      font-size: 12.5px;
     }
 
     .form-input:focus, .form-select:focus {
@@ -914,245 +988,264 @@ export function getDashboardHtml(): string {
     .form-actions {
       display: flex;
       justify-content: flex-end;
-      gap: 10px;
-      margin-top: 20px;
+      gap: 8px;
+      margin-top: 16px;
     }
 
-    /* Toast */
     #toast {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
+      bottom: 20px;
+      right: 20px;
       background: #1C1917;
-      border: 1px solid #44403C;
       color: #FAF7F2;
-      padding: 10px 18px;
+      border: 1px solid #44403C;
+      padding: 8px 14px;
       border-radius: 6px;
-      font-size: 12px;
+      font-size: 11.5px;
       font-family: 'Fragment Mono', monospace;
       display: none;
       z-index: 2000;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
     }
   </style>
 </head>
 <body>
   <div class="container">
+    <!-- Header -->
     <header>
-      <div>
+      <div class="brand-group">
         <div class="brand-title">
           <span>PARTH.OS</span>
           <span class="serif-flair">Operating Assistant</span>
         </div>
-        <div class="brand-sub">
-          CE24 • K.C. COLLEGE OF ENGINEERING, THANE • MUMBAI
-        </div>
+        <div class="brand-meta">K.C. COLLEGE OF ENGINEERING • THANE</div>
       </div>
-      <div class="header-right">
-        <div class="status-pill">
+      <div class="header-indicators">
+        <div class="chip">
           <div class="pulse-dot"></div>
-          <span>DAEMON ONLINE (24/7 CLOUD)</span>
+          <span>CLOUD DAEMON ACTIVE</span>
         </div>
-        <div class="clock-display" id="clock-display">
-          --:--:-- IST
-        </div>
+        <div class="clock-chip" id="clock-display">--:--:-- IST</div>
       </div>
     </header>
 
+    <!-- Controls Ribbon -->
     <div class="action-bar">
-      <button class="btn btn-primary" onclick="openTaskModal()">+ Add Academic Task</button>
-      <button class="btn" onclick="triggerReplan()">⚡ Replan Night Protocol</button>
-      <button class="btn" onclick="openCustomMealModal()">🍱 Custom Meal Log</button>
-      <button class="btn" onclick="refreshDashboard(true)">🔄 Sync Telemetry</button>
-      <a href="/api/dashboard-data" target="_blank" class="btn">JSON API</a>
-      <a href="/health" target="_blank" class="btn">Health Check</a>
-    </div>
-
-    <div class="phase-banner" id="phase-banner">
-      <div class="phase-info">
-        <h2 id="phase-title">🌙 Loading Current Protocol...</h2>
-        <p id="phase-desc">Determining active routine window...</p>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="openTaskModal()">+ Add Coursework</button>
+        <button class="btn" onclick="triggerReplan()">⚡ Replan Night</button>
+        <button class="btn" onclick="openCustomMealModal()">🍱 Log Meal</button>
+        <button class="btn" onclick="refreshDashboard(true)">🔄 Sync State</button>
       </div>
-      <div class="card-badge" id="date-badge">YYYY-MM-DD</div>
+      <div class="btn-group">
+        <a href="/api/dashboard-data" target="_blank" class="btn">JSON API</a>
+        <a href="/health" target="_blank" class="btn">Health Check</a>
+      </div>
     </div>
 
+    <!-- Active Routine Phase Banner -->
+    <div class="phase-banner" id="phase-banner">
+      <div class="phase-title">
+        <span id="phase-icon">🌙</span>
+        <span id="phase-title-text">Loading Protocol...</span>
+      </div>
+      <div class="phase-desc" id="phase-desc">Determining active routine window...</div>
+    </div>
+
+    <!-- Bento Grid -->
     <div class="bento-grid">
-      <!-- Tonight's Deep Work Plan -->
-      <div class="card col-8">
+      <!-- Row 1: Deep Work Plan (Col 7) + Fitness (Col 5) -->
+      <div class="card col-7 fixed-tier-1">
         <div class="card-header">
           <div class="card-title">
-            <span>🌙 Tonight's Deep Work Plan</span>
-            <span style="font-family:'Instrument Serif',serif;font-style:italic;font-size:16px;color:#92400E;text-transform:none;">(11:00 PM – 4:30 AM)</span>
+            <span>🌙 Deep Work Sprint</span>
+            <span style="font-family:'Instrument Serif',serif;font-style:italic;font-size:15px;color:#92400E;text-transform:none;">(11:00 PM – 4:30 AM)</span>
           </div>
-          <div class="card-badge" id="blocks-count">0 Blocks Scheduled</div>
+          <div class="card-badge" id="blocks-count">0 Blocks</div>
         </div>
-        <div class="schedule-list" id="schedule-list">
-          <div style="color:var(--text-muted);font-size:13px;padding:12px;">No schedule blocks generated yet. Click "⚡ Replan Night Protocol" above to deterministically schedule your pending coursework.</div>
+        <div class="timeline-list scroll-box" id="schedule-list">
+          <div style="color:var(--text-muted);font-size:12px;padding:12px;text-align:center;">No timeline blocks scheduled. Tap "⚡ Replan Night" to pack your coursework.</div>
         </div>
       </div>
 
-      <!-- Gym & Nutrition Macro Tracker -->
-      <div class="card col-4">
+      <div class="card col-5 fixed-tier-1">
         <div class="card-header">
-          <div class="card-title">🏋️ Gym & Protein Engine</div>
-          <div class="card-badge">Daily Target</div>
+          <div class="card-title">🏋️ Macro & Gym Engine</div>
+          <div class="card-badge">Target: 130g P • 2500 kcal</div>
         </div>
+        <div class="fitness-container">
+          <div>
+            <div class="meter-item">
+              <div class="meter-label">
+                <span style="color:var(--text-muted);">PROTEIN</span>
+                <span id="protein-val" style="font-weight:600;">0 / 130g (0%)</span>
+              </div>
+              <div class="meter-track">
+                <div class="meter-bar protein" id="protein-bar" style="width: 0%;"></div>
+              </div>
+            </div>
 
-        <div class="meter-container">
-          <div class="meter-header">
-            <span class="meter-title">PROTEIN TARGET (130g)</span>
-            <span class="meter-val" id="protein-val">0 / 130g (0%)</span>
+            <div class="meter-item">
+              <div class="meter-label">
+                <span style="color:var(--text-muted);">CALORIES</span>
+                <span id="calories-val" style="font-weight:600;">0 / 2500 kcal (0%)</span>
+              </div>
+              <div class="meter-track">
+                <div class="meter-bar calories" id="calories-bar" style="width: 0%;"></div>
+              </div>
+            </div>
           </div>
-          <div class="meter-bar">
-            <div class="meter-fill fill-protein" id="protein-bar" style="width: 0%;"></div>
-          </div>
-        </div>
 
-        <div class="meter-container">
-          <div class="meter-header">
-            <span class="meter-title">CALORIES TARGET (2500 kcal)</span>
-            <span class="meter-val" id="calories-val">0 / 2500 kcal (0%)</span>
+          <div>
+            <div class="sub-section-title">1-TAP MACRO PRESETS</div>
+            <div class="preset-grid">
+              <button class="preset-chip" onclick="logPreset('whey_shake')">
+                <span class="p-name">Whey Shake</span>
+                <span class="p-val">+26g</span>
+              </button>
+              <button class="preset-chip" onclick="logPreset('eggs_toast')">
+                <span class="p-name">Eggs + Toast</span>
+                <span class="p-val">+28g</span>
+              </button>
+              <button class="preset-chip" onclick="logPreset('solid_dinner')">
+                <span class="p-name">Solid Dinner</span>
+                <span class="p-val">+34g</span>
+              </button>
+              <button class="preset-chip" onclick="logPreset('quick_snack')">
+                <span class="p-name">PB / Sprout</span>
+                <span class="p-val">+14g</span>
+              </button>
+            </div>
           </div>
-          <div class="meter-bar">
-            <div class="meter-fill fill-calories" id="calories-bar" style="width: 0%;"></div>
-          </div>
-        </div>
-
-        <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px; font-family: 'Fragment Mono', monospace;">
-          ⚡ 1-TAP MEAL PRESETS:
-        </div>
-        <div class="presets-row">
-          <button class="preset-btn" onclick="logPreset('whey_shake')">
-            <span class="p-name">Whey Shake</span>
-            <span class="p-sub">+26g Protein</span>
-          </button>
-          <button class="preset-btn" onclick="logPreset('eggs_toast')">
-            <span class="p-name">Eggs + Toast</span>
-            <span class="p-sub">+28g Protein</span>
-          </button>
-          <button class="preset-btn" onclick="logPreset('solid_dinner')">
-            <span class="p-name">Solid Dinner</span>
-            <span class="p-sub">+34g Protein</span>
-          </button>
-          <button class="preset-btn" onclick="logPreset('quick_snack')">
-            <span class="p-name">PB / Sprout Snack</span>
-            <span class="p-sub">+14g Protein</span>
-          </button>
         </div>
       </div>
 
-      <!-- Print-Ready Xerox Bundler & Backpack -->
-      <div class="card col-4">
+      <!-- Row 2: Print Bundler (Col 4) + Hackathons (Col 4) + Ecosystem (Col 4) -->
+      <div class="card col-4 fixed-tier-2">
         <div class="card-header">
-          <div class="card-title">🖨️ Physical Xerox & Backpack</div>
-          <div class="card-badge" id="print-count">0 Turns Pending</div>
+          <div class="card-title">🖨️ Physical Xerox & Bag</div>
+          <div class="card-badge" id="print-count">0 Turns</div>
         </div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">
-          KCCEMSR Lab Turn Submission & Xerox Prints Queue:
-        </div>
-        <div id="print-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
-          <div style="font-size:12px;color:var(--text-dim);">All submissions printed and submitted.</div>
-        </div>
-        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; font-family: 'Fragment Mono', monospace;">
-          🎒 COMMUTE BACKPACK CHECKLIST:
-        </div>
-        <div id="backpack-list" style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;">
+          <div class="scroll-box" id="print-list" style="max-height:105px;overflow-y:auto;margin-bottom:8px;">
+            <div style="font-size:11.5px;color:var(--emerald);">✓ All lab submissions printed and packed.</div>
+          </div>
+          <div>
+            <div class="sub-section-title">COMMUTE BACKPACK SAFETY</div>
+            <div id="backpack-list"></div>
+          </div>
         </div>
       </div>
 
-      <!-- Regional Hackathon Radar -->
-      <div class="card col-4">
+      <div class="card col-4 fixed-tier-2">
         <div class="card-header">
-          <div class="card-title">🏆 Regional Hackathon Radar</div>
+          <div class="card-title">🏆 Regional Hackathons</div>
           <div class="card-badge">Mumbai / Thane / Pune</div>
         </div>
-        <div class="hackathon-list" id="hackathon-list">
-          <div style="color:var(--text-muted);font-size:12px;">Loading curated competitions...</div>
+        <div class="scroll-box" id="hackathon-list" style="flex:1;overflow-y:auto;">
+          <div style="color:var(--text-muted);font-size:11.5px;">Loading curated competitions...</div>
         </div>
       </div>
 
-      <!-- Connected Hubs Grid -->
-      <div class="card col-4">
+      <div class="card col-4 fixed-tier-2">
         <div class="card-header">
           <div class="card-title">🌐 Connected Ecosystem</div>
           <div class="card-badge">Permanent Bridge</div>
         </div>
-        <div class="hub-grid" id="hub-grid">
-          <div class="hub-item">
+        <div class="scroll-box" style="flex:1;overflow-y:auto;">
+          <div class="hub-row">
             <div>
-              <div class="hub-name">WhatsApp Academic Bridge</div>
-              <div class="hub-desc">Strict Read-Only Mode (sock.sendMessage neutered)</div>
+              <div class="hub-title">WhatsApp Academic Bridge</div>
+              <div class="hub-sub">Strict Read-Only Mode (Guaranteed)</div>
             </div>
-            <div class="hub-tag tag-active" id="hub-wa-tag">ACTIVE</div>
+            <span class="status-tag completed" id="hub-wa-tag">ACTIVE</span>
           </div>
-          <div class="hub-item">
+          <div class="hub-row">
             <div>
-              <div class="hub-name">Discord Broadcaster</div>
-              <div class="hub-desc">Permanent Webhook Channel Connected</div>
+              <div class="hub-title">Discord Broadcaster</div>
+              <div class="hub-sub">Permanent Webhook Channel</div>
             </div>
-            <div class="hub-tag tag-active" id="hub-dc-tag">ACTIVE</div>
+            <span class="status-tag completed" id="hub-dc-tag">ACTIVE</span>
           </div>
-          <div class="hub-item">
+          <div class="hub-row">
             <div>
-              <div class="hub-name">Telegram Bot Gateway</div>
-              <div class="hub-desc">@parth_assistant_bot Long Polling Daemon</div>
+              <div class="hub-title">Telegram Bot Gateway</div>
+              <div class="hub-sub">@parth_assistant_bot Long Polling</div>
             </div>
-            <div class="hub-tag tag-active">ACTIVE</div>
+            <span class="status-tag completed">ACTIVE</span>
           </div>
-          <div class="hub-item">
+          <div class="hub-row">
             <div>
-              <div class="hub-name">Atlassian Trello Sync</div>
-              <div class="hub-desc">PKCE OAuth Board Integration</div>
+              <div class="hub-title">Atlassian Trello Sync</div>
+              <div class="hub-sub">Academic Boards & Turns PKCE</div>
             </div>
-            <div class="hub-tag tag-active" id="hub-trello-tag">SYNCED</div>
+            <span class="status-tag completed" id="hub-trello-tag">SYNCED</span>
           </div>
-          <div class="hub-item">
+          <div class="hub-row">
             <div>
-              <div class="hub-name">GitHub Commit Tracker</div>
-              <div class="hub-desc">ParthVarekar (27 Repositories)</div>
+              <div class="hub-title">GitHub Commit Tracker</div>
+              <div class="hub-sub">ParthVarekar (27 Repositories)</div>
             </div>
-            <div class="hub-tag tag-active">ACTIVE</div>
+            <span class="status-tag completed">ACTIVE</span>
           </div>
         </div>
       </div>
 
-      <!-- Active Pending Tasks Backlog -->
-      <div class="card col-8">
-        <div class="card-header">
-          <div class="card-title">📋 Active Pending Tasks</div>
+      <!-- Row 3: Task Manager (Col 8) + Cloud Telemetry (Col 4) -->
+      <div class="card col-8 fixed-tier-3">
+        <div class="card-header" style="margin-bottom:8px;padding-bottom:8px;">
+          <div class="card-title">📋 Coursework & Task Backlog</div>
           <div class="card-badge" id="tasks-count">0 Tasks</div>
         </div>
-        <div class="task-list" id="task-list">
-          <div style="color:var(--text-muted);font-size:13px;padding:12px;">No active tasks pending. Add one using the button above!</div>
+        <div class="task-controls">
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-filter="all" onclick="setTaskFilter('all')">All</button>
+            <button class="filter-tab" data-filter="submission" onclick="setTaskFilter('submission')">Turns</button>
+            <button class="filter-tab" data-filter="coding" onclick="setTaskFilter('coding')">Coding</button>
+            <button class="filter-tab" data-filter="assignment" onclick="setTaskFilter('assignment')">Assignments</button>
+          </div>
+          <input type="text" class="task-search-input" id="task-search" placeholder="Filter tasks..." oninput="renderTasksList()" />
+        </div>
+        <div class="scroll-box" id="task-list" style="flex:1;overflow-y:auto;padding-right:2px;">
+          <div style="color:var(--text-muted);font-size:12px;padding:12px;text-align:center;">No pending tasks! All caught up.</div>
         </div>
       </div>
 
-      <!-- Render Cloud Telemetry -->
-      <div class="card col-4">
-        <div class="card-header">
-          <div class="card-title">☁️ Render Cloud Telemetry</div>
-          <div class="card-badge">24/7 Daemon</div>
+      <div class="card col-4 fixed-tier-3">
+        <div class="card-header" style="margin-bottom:8px;padding-bottom:8px;">
+          <div class="card-title">☁️ Render Telemetry</div>
+          <div class="card-badge">Zero-Downtime</div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:10px;font-family:'Fragment Mono',monospace;font-size:12px;">
-          <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:6px;">
-            <span style="color:var(--text-muted)">PLATFORM</span>
-            <span style="color:var(--emerald)" id="sys-platform">Render Free Web Service</span>
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;">
+          <div>
+            <div class="telemetry-row">
+              <span class="telemetry-key">HOST PLATFORM</span>
+              <span class="telemetry-val" style="color:var(--emerald);">Render Web Service</span>
+            </div>
+            <div class="telemetry-row">
+              <span class="telemetry-key">SCHEDULER TICK</span>
+              <span class="telemetry-val">15s Proactive Pulse</span>
+            </div>
+            <div class="telemetry-row">
+              <span class="telemetry-key">DATABASE</span>
+              <span class="telemetry-val">SQLite (WAL Mode)</span>
+            </div>
+            <div class="telemetry-row">
+              <span class="telemetry-key">NODE RUNTIME</span>
+              <span class="telemetry-val" id="sys-node">-</span>
+            </div>
+            <div class="telemetry-row">
+              <span class="telemetry-key">MEMORY (RSS)</span>
+              <span class="telemetry-val" id="sys-mem">-</span>
+            </div>
+            <div class="telemetry-row">
+              <span class="telemetry-key">SYSTEM UPTIME</span>
+              <span class="telemetry-val" id="sys-uptime">-</span>
+            </div>
           </div>
-          <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:6px;">
-            <span style="color:var(--text-muted)">HEARTBEAT TICK</span>
-            <span style="color:var(--text)">15s Proactive Scheduler</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:6px;">
-            <span style="color:var(--text-muted)">DATABASE</span>
-            <span style="color:var(--text)">SQLite (WAL Mode)</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:6px;">
-            <span style="color:var(--text-muted)">NODE RUNTIME</span>
-            <span style="color:var(--text)" id="sys-node">-</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;">
-            <span style="color:var(--text-muted)">UPTIME</span>
-            <span style="color:var(--text)" id="sys-uptime">-</span>
+          <div style="padding-top:10px;border-top:1px solid #F0EAE1;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:11px;color:var(--text-muted);font-family:'Fragment Mono',monospace;">STATUS: HEALTHY</span>
+            <button class="btn" style="padding:3px 8px;font-size:10.5px;" onclick="refreshDashboard(true)">Ping Telemetry</button>
           </div>
         </div>
       </div>
@@ -1163,29 +1256,28 @@ export function getDashboardHtml(): string {
   <div class="modal-overlay" id="task-modal">
     <div class="modal">
       <div class="modal-title">
-        <span>Add New Coursework / Task</span>
-        <button class="btn" onclick="closeModals()" style="padding:2px 8px;">✕</button>
+        <span>Add Coursework Task</span>
+        <button class="btn" onclick="closeModals()" style="padding:1px 6px;">✕</button>
       </div>
       <form id="task-form" onsubmit="submitTask(event)">
         <div class="form-group">
-          <label class="form-label">TITLE</label>
-          <input type="text" class="form-input" id="t-title" required placeholder="e.g. Distributed Systems Lab 3 Turn" />
+          <label class="form-label">TASK TITLE</label>
+          <input type="text" class="form-input" id="t-title" required placeholder="e.g. Distributed Systems Lab Turn 3" />
         </div>
         <div class="form-group">
           <label class="form-label">CATEGORY</label>
           <select class="form-select" id="t-category">
-            <option value="assignment">Assignment / Writeup</option>
-            <option value="submission">Practical Turn / Submission</option>
+            <option value="submission">Practical Turn / Xerox Submission</option>
             <option value="coding">Coding Sprint</option>
+            <option value="assignment">Assignment / Writeup</option>
             <option value="study">Study / Exam Prep</option>
             <option value="fitness">Fitness</option>
-            <option value="misc">Misc</option>
           </select>
         </div>
         <div class="form-group">
           <label class="form-label">PRIORITY</label>
           <select class="form-select" id="t-priority">
-            <option value="urgent">Urgent (Immediate print/turn)</option>
+            <option value="urgent">Urgent</option>
             <option value="high" selected>High</option>
             <option value="medium">Medium</option>
             <option value="low">Low</option>
@@ -1203,17 +1295,17 @@ export function getDashboardHtml(): string {
     </div>
   </div>
 
-  <!-- Custom Meal Modal -->
+  <!-- Meal Modal -->
   <div class="modal-overlay" id="meal-modal">
     <div class="modal">
       <div class="modal-title">
         <span>Log Custom Nutrition</span>
-        <button class="btn" onclick="closeModals()" style="padding:2px 8px;">✕</button>
+        <button class="btn" onclick="closeModals()" style="padding:1px 6px;">✕</button>
       </div>
       <form id="meal-form" onsubmit="submitCustomMeal(event)">
         <div class="form-group">
           <label class="form-label">MEAL NAME</label>
-          <input type="text" class="form-input" id="m-name" required placeholder="e.g. Chicken Biryani / Paneer Wrap" />
+          <input type="text" class="form-input" id="m-name" required placeholder="e.g. Paneer Wrap / Boiled Eggs" />
         </div>
         <div class="form-group">
           <label class="form-label">CALORIES (KCAL)</label>
@@ -1234,11 +1326,14 @@ export function getDashboardHtml(): string {
   <div id="toast"></div>
 
   <script>
+    let allTasks = [];
+    let currentTaskFilter = 'all';
+
     function showToast(msg) {
       const t = document.getElementById('toast');
       t.innerText = msg;
       t.style.display = 'block';
-      setTimeout(() => { t.style.display = 'none'; }, 3000);
+      setTimeout(() => { t.style.display = 'none'; }, 2800);
     }
 
     function updateClock() {
@@ -1266,6 +1361,46 @@ export function getDashboardHtml(): string {
       document.getElementById('meal-modal').style.display = 'flex';
     }
 
+    function setTaskFilter(filter) {
+      currentTaskFilter = filter;
+      document.querySelectorAll('.filter-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === filter);
+      });
+      renderTasksList();
+    }
+
+    function renderTasksList() {
+      const container = document.getElementById('task-list');
+      const search = (document.getElementById('task-search')?.value || '').toLowerCase().trim();
+
+      const filtered = allTasks.filter(t => {
+        const matchesFilter = currentTaskFilter === 'all' || t.category === currentTaskFilter;
+        const matchesSearch = !search || t.title.toLowerCase().includes(search);
+        return matchesFilter && matchesSearch;
+      });
+
+      document.getElementById('tasks-count').innerText = filtered.length + ' of ' + allTasks.length;
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-muted);font-size:11.5px;padding:16px;text-align:center;">No tasks matching current filter.</div>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(t => {
+        const dotClass = t.priority === 'urgent' ? 'pri-urgent' : (t.priority === 'high' ? 'pri-high' : 'pri-medium');
+        return '<div class="task-row">' +
+          '<div class="task-main">' +
+            '<div class="priority-dot ' + dotClass + '"></div>' +
+            '<span class="task-name" title="' + t.title + '">' + t.title + '</span>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:6px;">' +
+            '<span class="task-meta-tag">' + t.category.slice(0, 4).toUpperCase() + ' • ' + t.estimatedMinutes + 'm</span>' +
+            '<button class="btn" style="padding:2px 7px;font-size:10px;" onclick="completeTask(\\'' + t.id + '\\')">✓</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
     async function refreshDashboard(showNotification = false) {
       try {
         const res = await fetch('/api/dashboard-data');
@@ -1280,23 +1415,25 @@ export function getDashboardHtml(): string {
 
     function renderDashboard(data) {
       // Phase banner
-      document.getElementById('phase-title').innerText = data.routinePhase.icon + ' ' + data.routinePhase.label;
+      document.getElementById('phase-icon').innerText = data.routinePhase.icon;
+      document.getElementById('phase-title-text').innerText = data.routinePhase.label;
       document.getElementById('phase-desc').innerText = data.routinePhase.description;
-      document.getElementById('date-badge').innerText = data.ist.date;
 
       // Schedule blocks
       const sContainer = document.getElementById('schedule-list');
-      document.getElementById('blocks-count').innerText = data.schedule.blocksCount + ' Blocks Scheduled';
+      document.getElementById('blocks-count').innerText = data.schedule.blocksCount + ' Blocks';
       if (data.schedule.blocks.length === 0) {
-        sContainer.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px;">No schedule blocks active. Click "⚡ Replan Night Protocol" above to auto-pack your pending tasks into deep-work intervals.</div>';
+        sContainer.innerHTML = '<div style="color:var(--text-muted);font-size:11.5px;padding:12px;text-align:center;">No blocks active. Tap "⚡ Replan Night" above.</div>';
       } else {
         sContainer.innerHTML = data.schedule.blocks.map(b => {
           const isDone = b.status === 'completed';
-          return '<div class="schedule-block">' +
-            '<div class="schedule-time">' + b.startTime + ' – ' + b.endTime + '</div>' +
-            '<div class="schedule-desc">' + (b.taskTitle || 'Deep Work Sprint') + '</div>' +
-            '<div class="schedule-status ' + (isDone ? 'completed' : '') + '">' + b.status + '</div>' +
-            (!isDone ? '<button class="btn" style="padding:4px 8px;font-size:11px;" onclick="completeBlock(\\'' + b.id + '\\')">✓ Done</button>' : '') +
+          return '<div class="timeline-row">' +
+            '<div class="time-slot">' + b.startTime + ' – ' + b.endTime + '</div>' +
+            '<div class="time-title">' + (b.taskTitle || 'Deep Work Sprint') + '</div>' +
+            '<div style="display:flex;align-items:center;gap:6px;">' +
+              '<span class="status-tag ' + (isDone ? 'completed' : '') + '">' + b.status + '</span>' +
+              (!isDone ? '<button class="btn" style="padding:2px 6px;font-size:10px;" onclick="completeBlock(\\'' + b.id + '\\')">✓</button>' : '') +
+            '</div>' +
           '</div>';
         }).join('');
       }
@@ -1310,24 +1447,24 @@ export function getDashboardHtml(): string {
       document.getElementById('calories-bar').style.width = c.percent + '%';
 
       // Print Queue
-      document.getElementById('print-count').innerText = data.printQueue.totalItems + ' Turns Pending';
+      document.getElementById('print-count').innerText = data.printQueue.totalItems + ' Turns';
       const printContainer = document.getElementById('print-list');
       if (data.printQueue.items.length === 0) {
-        printContainer.innerHTML = '<div style="font-size:12px;color:var(--emerald);">✓ All coursework printed and submitted.</div>';
+        printContainer.innerHTML = '<div style="font-size:11px;color:var(--emerald);">✓ All coursework printed & submitted.</div>';
       } else {
         printContainer.innerHTML = data.printQueue.items.map(p => {
-          return '<div style="background:#FDFBF8;padding:8px 10px;border-radius:4px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">' +
-            '<div><div style="font-size:12px;font-weight:500;">' + p.title + '</div><div style="font-size:10px;color:var(--text-muted);">' + p.subject + ' • ' + p.estimatedPages + ' pgs Xerox</div></div>' +
-            '<span class="card-badge" style="color:var(--amber);">' + p.stage + '</span>' +
+          return '<div style="background:#FAF8F5;border:1px solid var(--border);border-radius:4px;padding:5px 8px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">' +
+            '<div style="font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px;">' + p.title + '</div>' +
+            '<span class="card-badge">' + p.estimatedPages + ' pgs</span>' +
           '</div>';
         }).join('');
       }
 
       // Backpack
       const bpContainer = document.getElementById('backpack-list');
-      bpContainer.innerHTML = data.printQueue.backpackChecklist.map(b => {
-        return '<div style="font-size:12px;display:flex;align-items:center;gap:8px;">' +
-          '<span style="color:' + (b.packed ? 'var(--emerald)' : 'var(--amber)') + '">' + (b.packed ? '✓' : '○') + '</span>' +
+      bpContainer.innerHTML = data.printQueue.backpackChecklist.slice(0, 4).map(b => {
+        return '<div class="checklist-row">' +
+          '<span style="color:' + (b.packed ? 'var(--emerald)' : 'var(--amber)') + ';font-size:11px;">' + (b.packed ? '✓' : '○') + '</span>' +
           '<span>' + b.item + '</span>' +
         '</div>';
       }).join('');
@@ -1335,48 +1472,27 @@ export function getDashboardHtml(): string {
       // Hackathons
       const hackContainer = document.getElementById('hackathon-list');
       hackContainer.innerHTML = data.hackathons.items.map(h => {
-        return '<div class="hackathon-item">' +
+        return '<div class="hackathon-row">' +
           '<div>' +
-            '<div class="hack-title">' + h.title + '</div>' +
-            '<div class="hack-meta">' + h.location + ' • Reg: ' + h.registrationDeadline + '</div>' +
+            '<div class="hack-name">' + h.title + '</div>' +
+            '<div class="hack-sub">' + h.cityZone.toUpperCase() + ' • ' + h.registrationDeadline.slice(5) + '</div>' +
           '</div>' +
           '<div style="text-align:right;">' +
-            '<div style="font-size:11px;font-weight:600;color:var(--emerald);">' + (h.prizePool || 'Certificates') + '</div>' +
-            '<button class="btn" style="padding:2px 8px;font-size:10px;margin-top:4px;" onclick="toggleHackBookmark(\\'' + h.id + '\\')">' + (h.isBookmarked ? '★ Saved' : '☆ Save') + '</button>' +
+            '<div style="font-size:10px;font-weight:600;color:var(--emerald);">' + (h.prizePool || 'Cert') + '</div>' +
+            '<button class="btn" style="padding:1px 5px;font-size:9.5px;margin-top:2px;" onclick="toggleHackBookmark(\\'' + h.id + '\\')">' + (h.isBookmarked ? '★' : '☆') + '</button>' +
           '</div>' +
         '</div>';
       }).join('');
 
       // Tasks
-      document.getElementById('tasks-count').innerText = data.tasks.totalPending + ' Pending';
-      const taskContainer = document.getElementById('task-list');
-      if (data.tasks.items.length === 0) {
-        taskContainer.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px;">No pending tasks! All caught up.</div>';
-      } else {
-        taskContainer.innerHTML = data.tasks.items.map(t => {
-          const priClass = t.priority === 'urgent' ? 'pri-urgent' : (t.priority === 'high' ? 'pri-high' : 'pri-medium');
-          return '<div class="task-row">' +
-            '<div>' +
-              '<div class="task-title">' + t.title + '</div>' +
-              '<div class="task-meta">' + t.category.toUpperCase() + ' • ' + t.estimatedMinutes + ' mins' + (t.deadline ? ' • Due ' + t.deadline : '') + '</div>' +
-            '</div>' +
-            '<div style="display:flex;align-items:center;gap:8px;">' +
-              '<span class="priority-badge ' + priClass + '">' + t.priority + '</span>' +
-              '<button class="btn" style="padding:4px 8px;font-size:11px;" onclick="completeTask(\\'' + t.id + '\\')">✓ Done</button>' +
-            '</div>' +
-          '</div>';
-        }).join('');
-      }
-
-      // Hubs
-      document.getElementById('hub-wa-tag').innerText = data.ecosystem.whatsapp.status === 'connected' ? 'READ-ONLY ACTIVE' : 'READY';
-      document.getElementById('hub-dc-tag').innerText = data.ecosystem.discord.status === 'connected' ? 'WEBHOOK ACTIVE' : 'READY';
-      document.getElementById('hub-trello-tag').innerText = data.ecosystem.trello.status === 'connected' ? 'SYNCED' : 'READY';
+      allTasks = data.tasks.items || [];
+      renderTasksList();
 
       // Telemetry
       document.getElementById('sys-node').innerText = data.system.nodeVersion;
+      document.getElementById('sys-mem').innerText = data.system.memoryRssMb + ' MB';
       const uptimeMins = Math.floor(data.system.uptimeSeconds / 60);
-      document.getElementById('sys-uptime').innerText = uptimeMins + 'm (' + data.system.uptimeSeconds + 's)';
+      document.getElementById('sys-uptime').innerText = uptimeMins + 'm ' + (data.system.uptimeSeconds % 60) + 's';
     }
 
     async function logPreset(presetKey) {
@@ -1387,7 +1503,7 @@ export function getDashboardHtml(): string {
           body: JSON.stringify({ presetKey })
         });
         if (res.ok) {
-          showToast('Macro preset logged successfully!');
+          showToast('Macro logged');
           refreshDashboard();
         }
       } catch (err) {
@@ -1433,7 +1549,7 @@ export function getDashboardHtml(): string {
         if (res.ok) {
           closeModals();
           document.getElementById('task-form').reset();
-          showToast('Task added: ' + title);
+          showToast('Task added');
           refreshDashboard();
         }
       } catch (err) {
@@ -1449,7 +1565,7 @@ export function getDashboardHtml(): string {
           body: JSON.stringify({ status: 'completed' })
         });
         if (res.ok) {
-          showToast('Task marked completed');
+          showToast('Task completed');
           refreshDashboard();
         }
       } catch (err) {
@@ -1465,7 +1581,7 @@ export function getDashboardHtml(): string {
           body: JSON.stringify({ status: 'completed' })
         });
         if (res.ok) {
-          showToast('Block marked completed');
+          showToast('Block completed');
           refreshDashboard();
         }
       } catch (err) {
@@ -1477,7 +1593,7 @@ export function getDashboardHtml(): string {
       try {
         const res = await fetch('/api/replan', { method: 'POST' });
         if (res.ok) {
-          showToast('Night protocol regenerated!');
+          showToast('Night schedule updated');
           refreshDashboard();
         }
       } catch (err) {
@@ -1496,7 +1612,6 @@ export function getDashboardHtml(): string {
       }
     }
 
-    // Initial load and periodic refresh
     refreshDashboard();
     setInterval(refreshDashboard, 8000);
   </script>
