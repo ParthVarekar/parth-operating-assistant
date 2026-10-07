@@ -302,10 +302,19 @@ export async function processAssistantChat(
         actionsTaken.push("Registered physical xerox/journal turn in submission pipeline");
       }
 
-      recordMemory("task_log", `Created coursework task: "${title}" (${est}m, Priority: ${newTask.priority})`, "chat").catch(console.warn);
+      if (intent.secondaryContext) {
+        actionsTaken.push(`Noted context: "${intent.secondaryContext}"`);
+      }
+
+      recordMemory("task_log", `Created ${category} task: "${title}" (${est}m, Priority: ${newTask.priority})`, "chat").catch(console.warn);
+
+      const contextPrefix = intent.secondaryContext
+        ? `💡 Noted: **${intent.secondaryContext}** — exciting initiative!\n`
+        : "";
+      const categoryLabel = category === "study" ? "study prep" : category === "coding" ? "coding sprint" : isSub ? "submission" : "coursework";
 
       replyText =
-        `✅ Added coursework: **${title}** (${est}m, Priority: ${newTask.priority}).\n` +
+        `${contextPrefix}✅ Added ${categoryLabel}: **${title}** (${est}m, Priority: ${newTask.priority}).\n` +
         (isSub ? `🖨️ Physical submission flagged for lab turn / xerox tracking.\n` : "") +
         `Tonight's 11 PM sprint schedule updated.`;
       return finalizeResponse(replyText, actionsTaken, sourceChannel, trimmed);
@@ -480,6 +489,10 @@ CRITICAL INSTRUCTIONS:
     // Intelligent fallback using database facts
     if (lower.includes("hackathon") && (lower.includes("lowest") || lower.includes("prize"))) {
       replyText = `Looking through our regional database, **Cognition Hackathon 2026** at SIES GST (Nerul) has the lowest listed cash prize pool at **₹75,000**, followed by **Thane TechSprint** at **₹80,000** and **DJ Unicode / SIH** at **₹1,00,000**. On the high end, **MumbaiHacks** offers **₹5,00,000**!`;
+    } else if (lower.includes("startup") || lower.includes("experiment")) {
+      replyText = `Love the drive on your self-sustaining startup experiment, Parth! While you prototype and iterate, remember we've got your study schedule anchored around your **9:30 PM dinner** and **4:30 AM sleep anchor**. Currently in the **${phase.label}** (${ist.timeStr} IST). What's our next focus block?`;
+    } else if (lower.includes("exam") || lower.includes("paper") || lower.includes("mdm") || lower.includes("study")) {
+      replyText = `Exam prep is high priority, Parth! I'm tracking your upcoming papers and study materials. Currently in the **${phase.label}** (${ist.timeStr} IST) with ${pending.length} pending tasks. Let's make sure your revision is locked in before your 4:30 AM sleep anchor!`;
     } else {
       replyText = `I'm with you, Parth! Currently in the **${phase.label}** window (${ist.timeStr} IST). You have ${pending.length} tasks queued and ${fitness.totalProtein} / 130g protein logged. How can we optimize your sprint right now?`;
     }

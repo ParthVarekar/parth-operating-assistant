@@ -90,10 +90,12 @@ describe("Dynamic Tool Synthesizer & Sandbox Execution Suite", () => {
     });
 
     const agentTools = convertSynthesizedToolsToAgentTools();
-    const found = agentTools.find((t) => t.function.name === "dyn_crypto_hasher");
+    const found = agentTools.find((t) => t.type === "function" && t.function.name === "dyn_crypto_hasher");
     expect(found).toBeDefined();
-    expect(found?.function.description).toContain("[Dynamic Synthesized Tool]");
-    expect(found?.function.parameters).toHaveProperty("properties");
+    if (found && found.type === "function") {
+      expect(found.function.description).toContain("[Dynamic Synthesized Tool]");
+      expect(found.function.parameters).toHaveProperty("properties");
+    }
   });
 
   it("supports deletion of synthesized tools", async () => {

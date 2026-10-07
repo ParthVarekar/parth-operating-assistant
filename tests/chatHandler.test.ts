@@ -89,4 +89,23 @@ describe("Assistant Chat & Natural Language Processor Suite", () => {
     expect(res.reply).toContain("Earliest Upcoming Regional Hackathon");
     expect(res.actionsTaken.some((a) => a.includes("earliest"))).toBe(true);
   });
+
+  it("processes multi-clause message with secondary startup context and study obligation", async () => {
+    const raw =
+      "um i am working on making a self sustaining startup kinda thing but i am just experimenting for now and other than that i have to read the mdm question bank solution which is there on whatsapp atleast once before sleeping so that i am a bit prepared for my paper on 9 oct";
+    const res = await processAssistantChat(raw, "discord");
+
+    // Must acknowledge startup initiative
+    expect(res.reply).toContain("Self Sustaining Startup");
+    // Must add clean study task
+    expect(res.reply.toLowerCase()).toContain("mdm");
+    // Must NOT truncate raw text to 'um i am working on making a self sustaining startup kinda th'
+    expect(res.reply).not.toContain("um i am working on");
+
+    const pending = findPendingTasks();
+    const mdmTask = pending.find((t) => t.title.toLowerCase().includes("mdm") || t.title.toLowerCase().includes("read"));
+    expect(mdmTask).toBeDefined();
+    expect(mdmTask?.category).toBe("study");
+    expect(mdmTask?.title).toContain("MDM");
+  });
 });

@@ -27,7 +27,7 @@ describe("Nightly Meta-Cognition & Velocity Learning Suite", () => {
       estimatedMinutes: 60,
     });
 
-    updateTaskStatus(task1.id, "done", 90);
+    updateTaskStatus(task1.id, "completed", 90);
 
     const report = await runNightlyMetaCognitionReflection(today);
 

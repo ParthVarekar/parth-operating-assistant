@@ -4,6 +4,8 @@ import {
   findPendingTasks,
   insertTask,
   updateTaskStatus,
+  updateTask,
+  deleteTask,
 } from "../db/repositories/taskRepository.js";
 import {
   findBlocksByDate,
@@ -2380,6 +2382,46 @@ export function startDashboardServer(customPort?: number): http.Server {
 
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ success: true, taskId, status }));
+        return;
+      }
+
+      // 5b. Update Task Properties
+      const taskDetailMatch = pathname.match(/^\/api\/tasks\/([^/]+)$/);
+      if (taskDetailMatch && req.method === "PATCH") {
+        const taskId = taskDetailMatch[1];
+        if (!taskId) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Invalid task ID" }));
+          return;
+        }
+        const body = await parseJsonBody<any>(req);
+        const updated = updateTask(taskId, body);
+        if (!updated) {
+          res.writeHead(404, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Task not found" }));
+          return;
+        }
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true, task: updated }));
+        return;
+      }
+
+      // 5c. Delete Task
+      if (taskDetailMatch && req.method === "DELETE") {
+        const taskId = taskDetailMatch[1];
+        if (!taskId) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Invalid task ID" }));
+          return;
+        }
+        const deleted = deleteTask(taskId);
+        if (!deleted) {
+          res.writeHead(404, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Task not found" }));
+          return;
+        }
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true, taskId }));
         return;
       }
 

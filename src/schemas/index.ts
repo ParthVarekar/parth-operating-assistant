@@ -113,6 +113,7 @@ export const ParsedIntentSchema = z.object({
   isPrintable: z.boolean().optional(),
   slipMinutes: z.number().int().positive().optional(),
   cityFilter: CityZoneSchema.optional(),
+  secondaryContext: z.string().optional(),
   responseMessage: z.string(),
 });
 

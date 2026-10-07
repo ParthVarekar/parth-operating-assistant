@@ -140,9 +140,69 @@ export function findCompletedTasksForDate(dateStr: string): Task[] {
   const db = getDb();
   const stmt = db.prepare(`
     SELECT * FROM tasks
-    WHERE status = 'done' AND updated_at LIKE ?
+    WHERE status IN ('completed', 'done') AND updated_at LIKE ?
     ORDER BY updated_at DESC
   `);
   const rows = (stmt.all(`${dateStr}%`) as unknown) as TaskRow[];
   return rows.map(mapRowToTask);
+}
+
+/**
+ * Updates properties of an existing task.
+ * @param id Task ID.
+ * @param updates Partial task fields to update.
+ * @returns Updated Task entity or null if not found.
+ */
+export function updateTask(
+  id: string,
+  updates: Partial<Omit<Task, "id" | "createdAt">>
+): Task | null {
+  const existing = findTaskById(id);
+  if (!existing) return null;
+
+  const db = getDb();
+  const now = new Date().toISOString();
+
+  const title = updates.title ?? existing.title;
+  const description = updates.description !== undefined ? updates.description : existing.description;
+  const category = updates.category ?? existing.category;
+  const status = updates.status ?? existing.status;
+  const priority = updates.priority ?? existing.priority;
+  const estimatedMinutes = updates.estimatedMinutes ?? existing.estimatedMinutes;
+  const actualMinutes = updates.actualMinutes !== undefined ? updates.actualMinutes : existing.actualMinutes;
+  const deadline = updates.deadline !== undefined ? updates.deadline : existing.deadline;
+
+  const stmt = db.prepare(`
+    UPDATE tasks
+    SET title = ?, description = ?, category = ?, status = ?, priority = ?,
+        estimated_minutes = ?, actual_minutes = ?, deadline = ?, updated_at = ?
+    WHERE id = ?
+  `);
+
+  stmt.run(
+    title,
+    description ?? null,
+    category,
+    status,
+    priority,
+    estimatedMinutes,
+    actualMinutes ?? null,
+    deadline ?? null,
+    now,
+    id
+  );
+
+  return findTaskById(id);
+}
+
+/**
+ * Permanently removes a task from the database.
+ * @param id Task ID.
+ * @returns True if deleted, false if not found.
+ */
+export function deleteTask(id: string): boolean {
+  const db = getDb();
+  const stmt = db.prepare("DELETE FROM tasks WHERE id = ?");
+  const result = stmt.run(id);
+  return result.changes > 0;
 }

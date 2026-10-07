@@ -201,7 +201,7 @@ describe("Autonomous Agent Tools & Function Calling Suite", () => {
 
     // Also verify getAvailableAgentTools includes the synthesized tool
     const allTools = getAvailableAgentTools();
-    expect(allTools.some((t) => t.function.name === "dyn_base64_encode")).toBe(true);
+    expect(allTools.some((t) => t.type === "function" && t.function.name === "dyn_base64_encode")).toBe(true);
   });
 
   it("executes run_nightly_reflection tool and returns audit report", async () => {

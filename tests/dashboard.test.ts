@@ -112,6 +112,32 @@ describe("Dashboard Server & Hanzo Web GUI", () => {
     const body = (await res.json()) as any;
     expect(body.success).toBe(true);
     expect(body.task.title).toBe("Distributed Systems Lab Turn 3");
+
+    const createdId = body.task.id;
+
+    // Test PATCH /api/tasks/:id
+    const patchRes = await fetch(`http://127.0.0.1:${TEST_PORT}/api/tasks/${createdId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: "Read MDM Question Bank Solution",
+        category: "study",
+        priority: "urgent",
+      }),
+    });
+    expect(patchRes.status).toBe(200);
+    const patchBody = (await patchRes.json()) as any;
+    expect(patchBody.success).toBe(true);
+    expect(patchBody.task.title).toBe("Read MDM Question Bank Solution");
+    expect(patchBody.task.category).toBe("study");
+
+    // Test DELETE /api/tasks/:id
+    const delRes = await fetch(`http://127.0.0.1:${TEST_PORT}/api/tasks/${createdId}`, {
+      method: "DELETE",
+    });
+    expect(delRes.status).toBe(200);
+    const delBody = (await delRes.json()) as any;
+    expect(delBody.success).toBe(true);
   });
 
   it("logs meal via POST /api/fitness/meal with preset", async () => {
