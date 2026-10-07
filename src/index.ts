@@ -43,16 +43,29 @@ async function main() {
   // 2.5 Start WhatsApp background listener if linked
   if (isWhatsAppConfigured()) {
     console.log("📲 Initializing WhatsApp background listener...");
-    const started = await startWhatsAppClient();
-    if (started) {
-      console.log("✅ WhatsApp background listener connected.");
-    }
+    startWhatsAppClient()
+      .then((started) => {
+        if (started) {
+          console.log("✅ WhatsApp background listener connected.");
+        }
+      })
+      .catch((err) => {
+        console.warn("⚠️ WhatsApp background listener failed to start:", err?.message || err);
+      });
   }
 
   // 2.6 Start Discord bot gateway if configured
   if (getDiscordBotToken()) {
     console.log("🤖 Starting Discord bot gateway...");
-    await startDiscordBot();
+    startDiscordBot()
+      .then((started) => {
+        if (started) {
+          console.log("✅ Discord bot gateway connected.");
+        }
+      })
+      .catch((err) => {
+        console.warn("⚠️ Discord bot gateway failed to start:", err?.message || err);
+      });
   }
 
   // 3. Start Telegram Bot

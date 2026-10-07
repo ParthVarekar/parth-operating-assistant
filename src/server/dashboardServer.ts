@@ -28,6 +28,7 @@ import {
   getDiscordWebhookUrl,
   getDiscordGatewayStatus,
   provisionAllDiscordGuilds,
+  startDiscordBot,
 } from "../services/discordService.js";
 import { getActiveGitHubUsername } from "../services/githubService.js";
 import { getTrelloAccessToken } from "../services/trelloService.js";
@@ -2503,7 +2504,11 @@ export function startDashboardServer(customPort?: number): http.Server {
 
       // 15. Discord Gateway Status API
       if (pathname === "/api/discord/status" && req.method === "GET") {
-        const status = getDiscordGatewayStatus();
+        let status = getDiscordGatewayStatus();
+        if (!status.isBotLoggedIn && status.botTokenConfigured) {
+          await startDiscordBot().catch(console.warn);
+          status = getDiscordGatewayStatus();
+        }
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ success: true, ...status }));
         return;
@@ -2515,6 +2520,15 @@ export function startDashboardServer(customPort?: number): http.Server {
         const code = prov.success ? 200 : 400;
         res.writeHead(code, { "Content-Type": "application/json" });
         res.end(JSON.stringify(prov));
+        return;
+      }
+
+      // 17. Reconnect / Refresh Discord Bot Gateway API
+      if (pathname === "/api/discord/reconnect" && req.method === "POST") {
+        const started = await startDiscordBot();
+        const status = getDiscordGatewayStatus();
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: started, status }));
         return;
       }
 

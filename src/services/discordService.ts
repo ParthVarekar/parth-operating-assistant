@@ -63,6 +63,8 @@ const CATEGORY_CHANNEL_HINTS: Record<DiscordChannelCategory, string[]> = {
 
 let activeDiscordClient: Client | null = null;
 let isBotLoggedIn = false;
+let isBotStarting = false;
+let lastDiscordError: string | null = null;
 
 /**
  * Gets configured Discord Webhook URL for a specific category or default.
@@ -405,12 +407,23 @@ export async function autoProvisionDiscordGuild(guild: Guild): Promise<{
   alreadyPresent: string[];
   error?: string;
 }> {
-  const me = guild.members.me;
-  if (me && !me.permissions.has(PermissionFlagsBits.ManageChannels)) {
+  let hasManageChannels = false;
+  try {
+    const me = guild.members.me ?? (await guild.members.fetchMe().catch(() => null));
+    if (me) {
+      hasManageChannels =
+        me.permissions.has(PermissionFlagsBits.Administrator) ||
+        me.permissions.has(PermissionFlagsBits.ManageChannels);
+    }
+  } catch (permErr) {
+    console.warn("Could not fetch bot guild member permissions:", permErr);
+  }
+
+  if (!hasManageChannels) {
     return {
       created: [],
       alreadyPresent: [],
-      error: "Bot lacks 'Manage Channels' permission. Please grant the bot 'Manage Channels' permission in Server Settings -> Roles.",
+      error: "Bot lacks 'Manage Channels' permission. Please grant the bot 'Administrator' or 'Manage Channels' permission in Server Settings -> Roles.",
     };
   }
 
@@ -535,9 +548,20 @@ export async function provisionAllDiscordGuilds(): Promise<{
   results: Array<{ guild: string; created: string[]; alreadyPresent: string[]; error?: string }>;
 }> {
   if (!activeDiscordClient || !isBotLoggedIn) {
+    if (getDiscordBotToken()) {
+      await startDiscordBot();
+      // Wait up to 5 seconds for bot to finish gateway ready handshake
+      for (let i = 0; i < 10; i++) {
+        if (activeDiscordClient && isBotLoggedIn) break;
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+  }
+
+  if (!activeDiscordClient || !isBotLoggedIn) {
     return {
       success: false,
-      message: "Discord Bot is not connected. Please configure DISCORD_BOT_TOKEN first.",
+      message: `Discord Bot is not connected. ${lastDiscordError ? `(Error: ${lastDiscordError})` : "Please configure DISCORD_BOT_TOKEN first."}`,
       results: [],
     };
   }
@@ -570,6 +594,7 @@ export function getDiscordGatewayStatus(): {
   isBotLoggedIn: boolean;
   botTag: string | null;
   guildsCount: number;
+  lastError: string | null;
 } {
   return {
     webhookConfigured: getDiscordWebhookUrl().length > 0,
@@ -577,6 +602,7 @@ export function getDiscordGatewayStatus(): {
     isBotLoggedIn: Boolean(activeDiscordClient && isBotLoggedIn),
     botTag: activeDiscordClient?.user?.tag ?? null,
     guildsCount: activeDiscordClient?.guilds.cache.size ?? 0,
+    lastError: lastDiscordError,
   };
 }
 
@@ -586,6 +612,7 @@ export function getDiscordGatewayStatus(): {
 export async function startDiscordBot(): Promise<boolean> {
   const token = getDiscordBotToken();
   if (!token) {
+    lastDiscordError = "DISCORD_BOT_TOKEN not configured.";
     console.log("ℹ️ Discord Bot Gateway: DISCORD_BOT_TOKEN not set. Webhook notifications are active, but gateway bot is idle. Set DISCORD_BOT_TOKEN to enable interactive commands (!setup, !plan) and natural language chat in Discord.");
     return false;
   }
@@ -593,6 +620,13 @@ export async function startDiscordBot(): Promise<boolean> {
   if (activeDiscordClient && isBotLoggedIn) {
     return true;
   }
+
+  if (isBotStarting) {
+    return false;
+  }
+
+  isBotStarting = true;
+  lastDiscordError = null;
 
   try {
     const client = new Client({
@@ -603,8 +637,14 @@ export async function startDiscordBot(): Promise<boolean> {
       ],
     });
 
+    client.on("error", (err) => {
+      console.error("⚠️ Discord client error:", err);
+      lastDiscordError = err?.message || String(err);
+    });
+
     client.on("ready", async () => {
       isBotLoggedIn = true;
+      isBotStarting = false;
       activeDiscordClient = client;
       console.log(`🤖 Discord Bot logged in as ${client.user?.tag}! Ready across segregated channels.`);
 
@@ -891,8 +931,11 @@ export async function startDiscordBot(): Promise<boolean> {
     });
 
     await client.login(token);
+    activeDiscordClient = client;
     return true;
-  } catch (err) {
+  } catch (err: any) {
+    isBotStarting = false;
+    lastDiscordError = err?.message || String(err);
     console.error("Error starting Discord bot:", err);
     return false;
   }
@@ -910,6 +953,7 @@ export function stopDiscordBot(): void {
     }
     activeDiscordClient = null;
     isBotLoggedIn = false;
+    isBotStarting = false;
   }
 }
 
