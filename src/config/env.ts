@@ -19,7 +19,7 @@ const EnvSchema = z.object({
   GITHUB_TOKEN: z.string().default(""),
   DISCORD_WEBHOOK_URL: z.string().default(""),
   DISCORD_BOT_TOKEN: z.string().default(""),
-  DISCORD_API_BASE_URL: z.string().default("https://discord.com/api"),
+  DISCORD_API_BASE_URL: z.string().default("https://canary.discord.com/api"),
   DISCORD_CHANNEL_ID: z.string().default(""),
   SLACK_WEBHOOK_URL: z.string().default(""),
   NOTION_API_KEY: z.string().default(""),
