@@ -1,3 +1,10 @@
+import dns from "node:dns";
+
+// Ensure IPv4 resolution takes precedence over IPv6 across all cloud environments (Render/Docker)
+if (typeof dns.setDefaultResultOrder === "function") {
+  dns.setDefaultResultOrder("ipv4first");
+}
+
 import { initDatabase } from "./db/database.js";
 import { getEnv } from "./config/env.js";
 import { createTelegramBot } from "./telegram/bot.js";

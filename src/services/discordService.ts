@@ -64,6 +64,7 @@ const CATEGORY_CHANNEL_HINTS: Record<DiscordChannelCategory, string[]> = {
 let activeDiscordClient: Client | null = null;
 let isBotLoggedIn = false;
 let isBotStarting = false;
+let botStartingTimestamp = 0;
 let lastDiscordError: string | null = null;
 
 /**
@@ -592,6 +593,8 @@ export function getDiscordGatewayStatus(): {
   webhookConfigured: boolean;
   botTokenConfigured: boolean;
   isBotLoggedIn: boolean;
+  isBotStarting: boolean;
+  wsStatus: number | null;
   botTag: string | null;
   guildsCount: number;
   lastError: string | null;
@@ -600,6 +603,8 @@ export function getDiscordGatewayStatus(): {
     webhookConfigured: getDiscordWebhookUrl().length > 0,
     botTokenConfigured: getDiscordBotToken().length > 0,
     isBotLoggedIn: Boolean(activeDiscordClient && isBotLoggedIn),
+    isBotStarting,
+    wsStatus: activeDiscordClient?.ws?.status ?? null,
     botTag: activeDiscordClient?.user?.tag ?? null,
     guildsCount: activeDiscordClient?.guilds.cache.size ?? 0,
     lastError: lastDiscordError,
@@ -622,10 +627,14 @@ export async function startDiscordBot(): Promise<boolean> {
   }
 
   if (isBotStarting) {
-    return false;
+    if (Date.now() - botStartingTimestamp < 25000) {
+      return false;
+    }
+    isBotStarting = false;
   }
 
   isBotStarting = true;
+  botStartingTimestamp = Date.now();
   lastDiscordError = null;
 
   try {
@@ -636,6 +645,8 @@ export async function startDiscordBot(): Promise<boolean> {
         GatewayIntentBits.MessageContent,
       ],
     });
+
+    activeDiscordClient = client;
 
     client.on("error", (err) => {
       console.error("⚠️ Discord client error:", err);
@@ -930,8 +941,12 @@ export async function startDiscordBot(): Promise<boolean> {
       }
     });
 
-    await client.login(token);
-    activeDiscordClient = client;
+    await Promise.race([
+      client.login(token),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Discord client.login timed out after 20s")), 20000)
+      ),
+    ]);
     return true;
   } catch (err: any) {
     isBotStarting = false;
