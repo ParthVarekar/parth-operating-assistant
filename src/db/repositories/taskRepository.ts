@@ -130,3 +130,19 @@ export function updateTaskStatus(id: string, status: TaskStatus, actualMinutes?:
     stmt.run(status, now, id);
   }
 }
+
+/**
+ * Retrieves tasks completed on a specific ISO date (YYYY-MM-DD).
+ * @param dateStr ISO date string.
+ * @returns Array of completed tasks.
+ */
+export function findCompletedTasksForDate(dateStr: string): Task[] {
+  const db = getDb();
+  const stmt = db.prepare(`
+    SELECT * FROM tasks
+    WHERE status = 'done' AND updated_at LIKE ?
+    ORDER BY updated_at DESC
+  `);
+  const rows = (stmt.all(`${dateStr}%`) as unknown) as TaskRow[];
+  return rows.map(mapRowToTask);
+}

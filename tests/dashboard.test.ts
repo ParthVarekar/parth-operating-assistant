@@ -170,6 +170,85 @@ describe("Dashboard Server & Hanzo Web GUI", () => {
     expect(Array.isArray(body.memories)).toBe(true);
   });
 
+  it("handles academic auto-solving endpoints (/api/academic/solve and /api/academic/solutions)", async () => {
+    const solveRes = await fetch(`http://127.0.0.1:${TEST_PORT}/api/academic/solve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        content: "Solve DSP FFT experiment in Python",
+        subject: "DSP",
+      }),
+    });
+    expect(solveRes.status).toBe(200);
+    const solveData = (await solveRes.json()) as any;
+    expect(solveData.success).toBe(true);
+    expect(solveData.report.subject).toContain("Digital Signal Processing");
+
+    const solutionsRes = await fetch(`http://127.0.0.1:${TEST_PORT}/api/academic/solutions`);
+    expect(solutionsRes.status).toBe(200);
+    const solutionsData = (await solutionsRes.json()) as any;
+    expect(solutionsData.success).toBe(true);
+    expect(Array.isArray(solutionsData.solutions)).toBe(true);
+  });
+
+  it("handles dynamic tool synthesis and execution endpoints (/api/tools/*)", async () => {
+    const synthRes = await fetch(`http://127.0.0.1:${TEST_PORT}/api/tools/synthesize`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "hex_encoder",
+        description: "Encodes string to hex format",
+        code: `async function run(args) { return { hex: Buffer.from(args.text).toString("hex") }; }`,
+      }),
+    });
+    expect(synthRes.status).toBe(201);
+    const synthData = (await synthRes.json()) as any;
+    expect(synthData.success).toBe(true);
+    expect(synthData.tool.name).toBe("hex_encoder");
+
+    const execRes = await fetch(`http://127.0.0.1:${TEST_PORT}/api/tools/execute`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nameOrId: "hex_encoder",
+        args: { text: "antigravity" },
+      }),
+    });
+    expect(execRes.status).toBe(200);
+    const execData = (await execRes.json()) as any;
+    expect(execData.success).toBe(true);
+    expect(execData.result.hex).toBe(Buffer.from("antigravity").toString("hex"));
+
+    const listRes = await fetch(`http://127.0.0.1:${TEST_PORT}/api/tools/synthesized`);
+    expect(listRes.status).toBe(200);
+    const listData = (await listRes.json()) as any;
+    expect(listData.tools.some((t: any) => t.name === "hex_encoder")).toBe(true);
+
+    const deleteRes = await fetch(`http://127.0.0.1:${TEST_PORT}/api/tools/synthesized/hex_encoder`, {
+      method: "DELETE",
+    });
+    expect(deleteRes.status).toBe(200);
+  });
+
+  it("handles nightly meta-cognition reflection endpoints (/api/meta-cognition/*)", async () => {
+    const runRes = await fetch(`http://127.0.0.1:${TEST_PORT}/api/meta-cognition/run`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date: "2026-10-07" }),
+    });
+    expect(runRes.status).toBe(200);
+    const runData = (await runRes.json()) as any;
+    expect(runData.success).toBe(true);
+    expect(runData.report.auditDate).toBe("2026-10-07");
+
+    const reportsRes = await fetch(`http://127.0.0.1:${TEST_PORT}/api/meta-cognition/reports`);
+    expect(reportsRes.status).toBe(200);
+    const reportsData = (await reportsRes.json()) as any;
+    expect(reportsData.success).toBe(true);
+    expect(Array.isArray(reportsData.reports)).toBe(true);
+    expect(reportsData.latest).toBeDefined();
+  });
+
   it("returns 404 on invalid route", async () => {
     const res = await fetch(`http://127.0.0.1:${TEST_PORT}/unknown-route`);
     expect(res.status).toBe(404);

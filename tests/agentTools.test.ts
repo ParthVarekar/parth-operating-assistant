@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { initDatabase } from "../src/db/database.js";
 import { seedInitialCuratedHackathons } from "../src/db/repositories/hackathonRepository.js";
-import { AGENT_TOOLS, executeAgentTool } from "../src/agent/agentTools.js";
+import { AGENT_TOOLS, getAvailableAgentTools, executeAgentTool } from "../src/agent/agentTools.js";
 import { buildAgentSystemPrompt } from "../src/agent/agentLoop.js";
 import { findPendingTasks } from "../src/db/repositories/taskRepository.js";
 import { getDailyFitnessSummary } from "../src/services/fitnessService.js";
@@ -169,5 +169,49 @@ describe("Autonomous Agent Tools & Function Calling Suite", () => {
     expect(prompt).toContain("AUTONOMOUS TOOL CAPABILITIES");
     expect(prompt).toContain("get_hackathons");
     expect(prompt).toContain("get_ai_news");
+  });
+
+  it("executes solve_academic_problem tool and returns solved experiment", async () => {
+    const res = await executeAgentTool("solve_academic_problem", {
+      content: "DFT FFT Radix-2 spectrum",
+      subject: "DSP",
+    });
+    expect(res.success).toBe(true);
+    expect(res.actionSummary).toContain("Auto-solved");
+    const payload = res.result as any;
+    expect(payload.subject).toContain("Digital Signal Processing");
+    expect(payload.htmlReportPath).toBeDefined();
+  });
+
+  it("executes synthesize_custom_tool and dynamically invokes execute_custom_tool", async () => {
+    const synthRes = await executeAgentTool("synthesize_custom_tool", {
+      name: "base64_encode",
+      description: "Encodes string to base64",
+      code: `async function run(args) { return { encoded: Buffer.from(args.text).toString("base64") }; }`,
+    });
+    expect(synthRes.success).toBe(true);
+    expect(synthRes.actionSummary).toContain("Synthesized dynamic custom tool");
+
+    const execRes = await executeAgentTool("execute_custom_tool", {
+      toolName: "base64_encode",
+      args: { text: "Hello World" },
+    });
+    expect(execRes.success).toBe(true);
+    expect((execRes.result as any).encoded).toBe(Buffer.from("Hello World").toString("base64"));
+
+    // Also verify getAvailableAgentTools includes the synthesized tool
+    const allTools = getAvailableAgentTools();
+    expect(allTools.some((t) => t.function.name === "dyn_base64_encode")).toBe(true);
+  });
+
+  it("executes run_nightly_reflection tool and returns audit report", async () => {
+    const res = await executeAgentTool("run_nightly_reflection", {
+      date: "2026-10-07",
+    });
+    expect(res.success).toBe(true);
+    expect(res.actionSummary).toContain("Executed nightly meta-cognition audit");
+    const payload = res.result as any;
+    expect(payload.auditDate).toBe("2026-10-07");
+    expect(payload.velocityRatio).toBeDefined();
   });
 });

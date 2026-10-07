@@ -19,6 +19,14 @@ import {
 } from "../services/trelloService.js";
 import { searchMemories, retrieveContextualMemories, recordMemory } from "../services/memoryService.js";
 import { getISTDateTime, getCurrentRoutinePhase } from "../server/dashboardServer.js";
+import { solveAcademicProblem } from "../services/academicAutoSolverService.js";
+import {
+  synthesizeTool,
+  executeSynthesizedTool,
+  getSynthesizedTool,
+  convertSynthesizedToolsToAgentTools,
+} from "../services/toolSynthesizer.js";
+import { runNightlyMetaCognitionReflection } from "../services/metaCognitionEngine.js";
 import type { CityZone, MemoryCategory, Task, TaskCategory, TaskPriority } from "../types/index.js";
 
 /**
@@ -289,7 +297,109 @@ export const AGENT_TOOLS: OpenAI.ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "solve_academic_problem",
+      description:
+        "Decomposes, auto-solves, generates verified code, simulates terminal output, and compiles Mumbai University / KCCEMSR print-ready journal HTML bundles into the print queue for academic lab assignments or question banks.",
+      parameters: {
+        type: "object",
+        properties: {
+          content: {
+            type: "string",
+            description: "The assignment brief, question bank problem, or lab manual experiment prompt.",
+          },
+          subject: {
+            type: "string",
+            description: "Optional subject name (e.g., 'Digital Signal Processing', 'DBMS', 'Operating Systems').",
+          },
+          taskId: {
+            type: "string",
+            description: "Optional existing task ID to associate and link with the submission pipeline.",
+          },
+        },
+        required: ["content"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "synthesize_custom_tool",
+      description:
+        "Dynamically synthesizes, compiles, and registers a brand-new custom tool on the fly with safe sandboxed JavaScript execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "Identifier name for the tool (alphanumeric and underscores, e.g. 'calculate_gpa').",
+          },
+          description: {
+            type: "string",
+            description: "What the custom tool does.",
+          },
+          requirements: {
+            type: "string",
+            description: "Functional requirements and logic for the tool code generator.",
+          },
+          code: {
+            type: "string",
+            description: "Optional explicit JavaScript code implementing an async run(args) function.",
+          },
+        },
+        required: ["name", "description"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "execute_custom_tool",
+      description:
+        "Executes an existing dynamically synthesized tool inside a secure, time-bounded node:vm sandbox and returns the result.",
+      parameters: {
+        type: "object",
+        properties: {
+          toolName: {
+            type: "string",
+            description: "The name or ID of the synthesized tool to execute.",
+          },
+          args: {
+            type: "object",
+            description: "Key-value argument dictionary to pass to the tool.",
+          },
+        },
+        required: ["toolName"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "run_nightly_reflection",
+      description:
+        "Audits daily task execution velocity, updates estimation multipliers, validates dinner (9:30 PM) and sleep (4:30 AM) anchors, consolidates episodic memory, and auto-drafts tomorrow's schedule blocks.",
+      parameters: {
+        type: "object",
+        properties: {
+          date: {
+            type: "string",
+            description: "Optional ISO date (YYYY-MM-DD) to audit. Defaults to yesterday/today cycle.",
+          },
+        },
+      },
+    },
+  },
 ];
+
+/**
+ * Returns static agent tools combined with all dynamically synthesized active tools.
+ */
+export function getAvailableAgentTools(): OpenAI.ChatCompletionTool[] {
+  return [...AGENT_TOOLS, ...convertSynthesizedToolsToAgentTools()];
+}
 
 export interface ToolExecutionResult {
   success: boolean;
@@ -528,13 +638,13 @@ export async function executeAgentTool(
     case "log_nutrition": {
       let loggedDescription = "";
       if (args.preset && typeof args.preset === "string") {
-        logQuickPresetMeal(args.preset);
+        logQuickPresetMeal(args.preset, ist.dateStr);
         loggedDescription = `Preset: ${args.preset}`;
       } else {
         const mealName = String(args.mealName || "Nutritious Meal");
         const calories = typeof args.calories === "number" ? args.calories : 350;
         const protein = typeof args.proteinGrams === "number" ? args.proteinGrams : 25;
-        logCustomMeal(mealName, calories, protein, "snack");
+        logCustomMeal(mealName, calories, protein, "snack", ist.dateStr);
         loggedDescription = `${mealName} (+${protein}g P, ${calories} kcal)`;
       }
 
@@ -660,11 +770,129 @@ export async function executeAgentTool(
       };
     }
 
-    default:
+    case "solve_academic_problem": {
+      const content = String(args.content || "").trim();
+      const subject = args.subject ? String(args.subject).trim() : undefined;
+      const taskId = args.taskId ? String(args.taskId).trim() : undefined;
+
+      if (!content) {
+        return {
+          success: false,
+          result: { error: "Content / assignment prompt cannot be empty." },
+          actionSummary: "Failed to solve problem: empty content",
+        };
+      }
+
+      const report = await solveAcademicProblem(content, subject, taskId);
+      return {
+        success: true,
+        result: {
+          reportId: report.id,
+          subject: report.subject,
+          experimentNumber: report.experimentNumber,
+          title: report.title,
+          sourceCodeLanguage: report.sourceCode.language,
+          htmlReportPath: report.htmlReportPath,
+          vivaQuestionsCount: report.vivaQuestions.length,
+        },
+        actionSummary: `Auto-solved [${report.subject}] Exp ${report.experimentNumber}: "${report.title}"`,
+      };
+    }
+
+    case "synthesize_custom_tool": {
+      const name = String(args.name || "").trim();
+      const description = String(args.description || "").trim();
+      const requirements = args.requirements ? String(args.requirements).trim() : undefined;
+      const code = args.code ? String(args.code).trim() : undefined;
+
+      if (!name || !description) {
+        return {
+          success: false,
+          result: { error: "Tool name and description are required." },
+          actionSummary: "Failed to synthesize tool: missing name or description",
+        };
+      }
+
+      const synthesized = await synthesizeTool({
+        name,
+        description,
+        requirements,
+        code,
+        author: "autonomous_agent",
+      });
+
+      return {
+        success: true,
+        result: {
+          id: synthesized.id,
+          name: synthesized.name,
+          description: synthesized.description,
+          parameters: synthesized.parameters,
+        },
+        actionSummary: `Synthesized dynamic custom tool "${synthesized.name}"`,
+      };
+    }
+
+    case "execute_custom_tool": {
+      const targetTool = String(args.toolName || "").trim();
+      const toolArgs = (args.args as Record<string, unknown>) || {};
+
+      if (!targetTool) {
+        return {
+          success: false,
+          result: { error: "toolName is required." },
+          actionSummary: "Failed to execute custom tool: missing toolName",
+        };
+      }
+
+      const execResult = await executeSynthesizedTool(targetTool, toolArgs);
+      return {
+        success: execResult.success,
+        result: execResult.result ?? { error: execResult.error },
+        actionSummary: execResult.success
+          ? `Executed synthesized tool "${targetTool}" in ${execResult.durationMs}ms`
+          : `Failed executing custom tool "${targetTool}": ${execResult.error}`,
+      };
+    }
+
+    case "run_nightly_reflection": {
+      const date = args.date ? String(args.date).trim() : undefined;
+      const reflection = await runNightlyMetaCognitionReflection(date);
+      return {
+        success: true,
+        result: {
+          auditDate: reflection.auditDate,
+          tasksCompleted: reflection.velocityMetrics.completedTaskCount,
+          velocityRatio: reflection.velocityMetrics.ratio,
+          dinnerRespected: reflection.anchorAudit.dinnerAnchorRespected,
+          sleepRespected: reflection.anchorAudit.sleepAnchorRespected,
+          tomorrowBlocks: reflection.tomorrowDraft.blocksScheduled,
+          summary: reflection.reflectionSummary,
+        },
+        actionSummary: `Executed nightly meta-cognition audit for ${reflection.auditDate}`,
+      };
+    }
+
+    default: {
+      // Dynamic fallback for synthesized tools invoked directly
+      const cleanName = toolName.replace(/^dyn_/, "");
+      const dynamicTool = getSynthesizedTool(cleanName);
+      if (dynamicTool) {
+        const dynExec = await executeSynthesizedTool(dynamicTool.id, args);
+        return {
+          success: dynExec.success,
+          result: dynExec.result ?? { error: dynExec.error },
+          actionSummary: dynExec.success
+            ? `Executed dynamic tool "${dynamicTool.name}"`
+            : `Dynamic tool "${dynamicTool.name}" error: ${dynExec.error}`,
+        };
+      }
+
       return {
         success: false,
         result: { error: `Unknown tool: ${toolName}` },
         actionSummary: `Tool call failed: Unknown tool ${toolName}`,
       };
+    }
   }
 }

@@ -11,6 +11,7 @@ import {
 } from "../services/discordService.js";
 import { appendChatMessage } from "../agent/chatHandler.js";
 import { getUserProfile } from "../db/repositories/habitRepository.js";
+import { runNightlyMetaCognitionReflection } from "../services/metaCognitionEngine.js";
 
 // Global reference for active Telegram Bot to enable autonomous outreach
 let telegramBotInstance: any = null;
@@ -273,6 +274,21 @@ export async function tickAutonomousHeartbeat(): Promise<void> {
     }
   } catch (nutrErr) {
     console.error("Error in nutrition heartbeat monitor:", nutrErr);
+  }
+
+  // -------------------------------------------------------------
+  // 5. Nightly Meta-Cognition & Velocity Learner (04:00 AM IST)
+  // -------------------------------------------------------------
+  try {
+    if (ist.hours === 4 && ist.minutes <= 15) {
+      const metaKey = `meta_cognition_${ist.dateStr}`;
+      if (lastMacroNotifiedKey !== metaKey) {
+        lastMacroNotifiedKey = metaKey;
+        await runNightlyMetaCognitionReflection();
+      }
+    }
+  } catch (metaErr) {
+    console.error("Error in meta-cognition heartbeat monitor:", metaErr);
   }
 } finally {
   isHeartbeatRunning = false;

@@ -1,5 +1,5 @@
 import type OpenAI from "openai";
-import { AGENT_TOOLS, executeAgentTool } from "./agentTools.js";
+import { AGENT_TOOLS, getAvailableAgentTools, executeAgentTool } from "./agentTools.js";
 import { executeModelTurn, type AgentTurnResult } from "./modelClient.js";
 import { getISTDateTime, getCurrentRoutinePhase } from "../server/dashboardServer.js";
 import { getDailyFitnessSummary } from "../services/fitnessService.js";
@@ -110,7 +110,7 @@ export async function runAutonomousAgentLoop(
   for (let turn = 0; turn < MAX_TURNS; turn++) {
     const turnResult: AgentTurnResult = await executeModelTurn({
       messages,
-      tools: AGENT_TOOLS,
+      tools: getAvailableAgentTools(),
       temperature: 0.2,
     });
 

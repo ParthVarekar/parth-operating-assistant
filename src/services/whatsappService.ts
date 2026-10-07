@@ -23,6 +23,7 @@ import {
 } from "./contentDeduplicationService.js";
 import { evaluateAcademicContentSemantic } from "./academicSemanticClassifier.js";
 import { recordMemory } from "./memoryService.js";
+import { solveAcademicProblem } from "./academicAutoSolverService.js";
 import { insertTask } from "../db/repositories/taskRepository.js";
 import type { Task } from "../types/index.js";
 
@@ -562,6 +563,20 @@ export async function startWhatsAppClient(): Promise<boolean> {
               } catch (listenerErr) {
                 console.error("Error in alert listener:", listenerErr);
               }
+            }
+
+            // 4. Trigger Autonomous Academic Pre-Computation Solver in background
+            if (
+              ingestion.tasksCreated.length > 0 ||
+              conversationText.toLowerCase().includes("experiment") ||
+              conversationText.toLowerCase().includes("lab") ||
+              conversationText.toLowerCase().includes("journal") ||
+              conversationText.toLowerCase().includes("assignment")
+            ) {
+              const associatedTask = ingestion.tasksCreated[0];
+              solveAcademicProblem(conversationText, semanticEval.subject, associatedTask?.id).catch((err: unknown) => {
+                console.warn("[AcademicAutoSolver] Background auto-solve error:", err);
+              });
             }
           }
         } catch (err) {

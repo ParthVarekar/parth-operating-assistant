@@ -37,6 +37,21 @@ import { getUserProfile } from "../db/repositories/habitRepository.js";
 import { processAssistantChat, getChatHistory } from "../agent/chatHandler.js";
 import { getSavedAiNews, runAiIntelligenceScan } from "../services/aiNewsService.js";
 import { getRecentMemories } from "../db/repositories/memoryRepository.js";
+import {
+  solveAcademicProblem,
+  listSolvedAcademicReports,
+} from "../services/academicAutoSolverService.js";
+import {
+  synthesizeTool,
+  listSynthesizedTools,
+  removeSynthesizedTool,
+  executeSynthesizedTool,
+} from "../services/toolSynthesizer.js";
+import {
+  runNightlyMetaCognitionReflection,
+  listMetaCognitionReports,
+  getLatestMetaCognitionReport,
+} from "../services/metaCognitionEngine.js";
 import type { Task, BlockStatus, CityZone } from "../types/index.js";
 
 const startTimeEpoch = Date.now();
@@ -2554,6 +2569,97 @@ export function startDashboardServer(customPort?: number): http.Server {
           res.writeHead(500, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ host: targetHost, error: err?.message || String(err) }));
         }
+        return;
+      }
+
+      // 19. Academic Auto-Solver API
+      if (pathname === "/api/academic/solve" && req.method === "POST") {
+        const body = await parseJsonBody<any>(req);
+        if (!body.content || typeof body.content !== "string") {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Content is required" }));
+          return;
+        }
+
+        const report = await solveAcademicProblem(body.content, body.subject, body.taskId);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true, report }));
+        return;
+      }
+
+      if (pathname === "/api/academic/solutions" && req.method === "GET") {
+        const solutions = listSolvedAcademicReports();
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true, solutions }));
+        return;
+      }
+
+      // 20. Self-Synthesizing Tool Registry API
+      if (pathname === "/api/tools/synthesize" && req.method === "POST") {
+        const body = await parseJsonBody<any>(req);
+        if (!body.name || !body.description) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Name and description are required" }));
+          return;
+        }
+
+        const tool = await synthesizeTool({
+          name: body.name,
+          description: body.description,
+          requirements: body.requirements,
+          code: body.code,
+          parameters: body.parameters,
+          author: "user",
+        });
+
+        res.writeHead(201, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true, tool }));
+        return;
+      }
+
+      if (pathname === "/api/tools/synthesized" && req.method === "GET") {
+        const tools = listSynthesizedTools();
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true, tools }));
+        return;
+      }
+
+      if (pathname.startsWith("/api/tools/synthesized/") && req.method === "DELETE") {
+        const toolTarget = pathname.replace("/api/tools/synthesized/", "").trim();
+        const deleted = removeSynthesizedTool(toolTarget);
+        res.writeHead(deleted ? 200 : 404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: deleted }));
+        return;
+      }
+
+      if (pathname === "/api/tools/execute" && req.method === "POST") {
+        const body = await parseJsonBody<any>(req);
+        if (!body.nameOrId) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "nameOrId is required" }));
+          return;
+        }
+
+        const execResult = await executeSynthesizedTool(body.nameOrId, body.args || {});
+        res.writeHead(execResult.success ? 200 : 500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify(execResult));
+        return;
+      }
+
+      // 21. Nightly Meta-Cognition & Velocity Learner API
+      if (pathname === "/api/meta-cognition/run" && req.method === "POST") {
+        const body = await parseJsonBody<any>(req).catch(() => ({}));
+        const report = await runNightlyMetaCognitionReflection(body?.date);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true, report }));
+        return;
+      }
+
+      if (pathname === "/api/meta-cognition/reports" && req.method === "GET") {
+        const reports = listMetaCognitionReports();
+        const latest = getLatestMetaCognitionReport();
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true, reports, latest }));
         return;
       }
 
