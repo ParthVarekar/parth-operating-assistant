@@ -7,6 +7,8 @@ import { findPendingTasks } from "../db/repositories/taskRepository.js";
 import { getEnv } from "../config/env.js";
 import type { ChatMessage } from "./chatHandler.js";
 
+import { getContextMemorySnapshot } from "./contextMemory.js";
+
 export interface AgentLoopResult {
   reply: string;
   actionsTaken: string[];
@@ -17,8 +19,9 @@ const MAX_TURNS = 4;
 /**
  * Builds the comprehensive autonomous persona and system prompt.
  * Instructs the LLM to freely invoke tools whenever data or state mutations are needed.
+ * Injects working conversation context and retrieved associative memories.
  */
-export function buildAgentSystemPrompt(): string {
+export function buildAgentSystemPrompt(contextPromptBlock?: string): string {
   const ist = getISTDateTime();
   const phase = getCurrentRoutinePhase(ist.hours, ist.minutes);
   const fitness = getDailyFitnessSummary(ist.dateStr);
@@ -37,8 +40,10 @@ CURRENT TIME & ROUTINE ANCHORS:
 - Current Daily Nutrition: ${fitness.totalProtein}g / 130g protein logged (${fitness.totalCalories} / 2500 kcal)
 - Active Tasks in Backlog: ${pendingCount}
 
-AUTONOMOUS TOOL CAPABILITIES:
+${contextPromptBlock ? `${contextPromptBlock}\n` : ""}
+AUTONOMOUS TOOL CAPABILITIES & CONTEXTUAL REASONING:
 You have complete freedom to call tools whenever you deem necessary.
+- CRITICAL CONTEXT UNDERSTANDING: Always use the Active Conversation Working Memory and Past Memories above to understand what Parth is referring to when he asks follow-up questions (e.g. "when is it?", "what is the deadline?", "how much is the prize?", "can you add that to my tasks?", "what about that assignment?"). Connect pronouns like "it", "that", or "the hackathon" to the active entity in focus.
 - When Parth asks about hackathons, upcoming events, or compares prizes or dates, CALL 'get_hackathons' with appropriate filters and sorting.
 - When Parth asks about AI news, LLM updates, or frontier tech radar, CALL 'get_ai_news'.
 - When Parth asks to add or track a task, coursework, or lab submission, CALL 'create_task'.
@@ -60,11 +65,13 @@ You have complete freedom to call tools whenever you deem necessary.
  * Executes the autonomous agent loop, letting the LLM decide which tools to call and reasoning over results.
  * @param userText User message prompt.
  * @param recentHistory Recent conversation history.
+ * @param channel The communication channel.
  * @returns Final LLM reply and list of executed actions.
  */
 export async function runAutonomousAgentLoop(
   userText: string,
-  recentHistory: ChatMessage[] = []
+  recentHistory: ChatMessage[] = [],
+  channel: string = "default"
 ): Promise<AgentLoopResult> {
   const env = getEnv();
 
@@ -73,13 +80,19 @@ export async function runAutonomousAgentLoop(
     throw new Error("AI provider in offline/mock mode; falling back to deterministic processing");
   }
 
-  const systemPrompt = buildAgentSystemPrompt();
+  // Retrieve working context snapshot & relevant past memories
+  const { promptBlock } = getContextMemorySnapshot(userText, channel);
+  const systemPrompt = buildAgentSystemPrompt(promptBlock);
+
   const messages: OpenAI.ChatCompletionMessageParam[] = [
     { role: "system", content: systemPrompt },
   ];
 
-  // Include recent conversation history for multi-turn conversational context
-  const slice = recentHistory.slice(-6);
+  // Include recent conversation history (excluding the current user message if it was already appended)
+  const pastHistory = recentHistory.filter(
+    (h) => !(h.role === "user" && h.text.trim() === userText.trim())
+  );
+  const slice = pastHistory.slice(-8);
   for (const h of slice) {
     if (h.role === "assistant") {
       messages.push({ role: "assistant", content: h.text });

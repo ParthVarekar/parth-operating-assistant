@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { parseUserIntent } from "./intentParser.js";
 import { generateCompletion } from "./modelClient.js";
 import { runAutonomousAgentLoop } from "./agentLoop.js";
+import { getActiveContext, updateActiveContext } from "./contextMemory.js";
 import { findPendingTasks, insertTask, updateTaskStatus } from "../db/repositories/taskRepository.js";
 import { scheduleEveningPlan } from "../planner/intervalScheduler.js";
 import { handleTaskOverrun } from "../planner/replanEngine.js";
@@ -85,9 +86,9 @@ export async function processAssistantChat(
 
   // 1.5 Autonomous Agent Tool Loop (empowers LLM to decide on actions and tool calls)
   try {
-    const agentResult = await runAutonomousAgentLoop(trimmed, getChatHistory());
+    const agentResult = await runAutonomousAgentLoop(trimmed, getChatHistory(), sourceChannel);
     if (agentResult && agentResult.reply) {
-      return finalizeResponse(agentResult.reply, agentResult.actionsTaken, sourceChannel);
+      return finalizeResponse(agentResult.reply, agentResult.actionsTaken, sourceChannel, trimmed);
     }
   } catch (err: unknown) {
     if (process.env.DEBUG_AI) {
@@ -112,7 +113,7 @@ export async function processAssistantChat(
       if (card) {
         actionsTaken.push(`Delegated "${taskToDelegate.title}" to Trello`);
         replyText = `📌 Delegated **"${taskToDelegate.title}"** to your Trello board!\nYou can view, track, and drag it to Done on Trello. Once you mark it complete there, I'll sync it automatically!`;
-        return finalizeResponse(replyText, actionsTaken, sourceChannel);
+        return finalizeResponse(replyText, actionsTaken, sourceChannel, trimmed);
       }
     }
   }
@@ -120,7 +121,7 @@ export async function processAssistantChat(
   if (lower.includes("sync trello") || lower.includes("trello sync") || lower.includes("completed on trello")) {
     const syncRes = await syncTrelloTaskCompletions();
     actionsTaken.push("Synchronized Trello task completions");
-    return finalizeResponse(syncRes.message, actionsTaken, sourceChannel);
+    return finalizeResponse(syncRes.message, actionsTaken, sourceChannel, trimmed);
   }
 
   // 2.5 Quick greetings
@@ -128,7 +129,7 @@ export async function processAssistantChat(
     const fitnessSummary = getDailyFitnessSummary(ist.dateStr);
     const pendingCount = findPendingTasks().length;
     replyText = `👋 Hey Parth! Operating Assistant ready. Currently in the **${phase.label}** (${ist.timeStr} IST).\n• Tasks queued: **${pendingCount}**\n• Protein logged: **${fitnessSummary.totalProtein} / 130g**\n• Protected dinner at **9:30 PM**, deep-work sprint starts at **11:00 PM**.\nHow can I help you operate right now?`;
-    return finalizeResponse(replyText, actionsTaken, sourceChannel);
+    return finalizeResponse(replyText, actionsTaken, sourceChannel, trimmed);
   }
 
   // 2.6 Frontier AI & Tech Radar queries
@@ -153,7 +154,7 @@ export async function processAssistantChat(
         )
         .join("\n\n") +
       `\n\n_Stay sharp for upcoming hackathons & industry projects!_`;
-    return finalizeResponse(replyText, actionsTaken, sourceChannel);
+    return finalizeResponse(replyText, actionsTaken, sourceChannel, trimmed);
   }
 
   // 2.7 Hackathon analytical and comparative questions (Earliest, Lowest prize, Highest prize)
@@ -181,7 +182,7 @@ export async function processAssistantChat(
           `• 📍 **Venue:** ${earliest.venue}\n` +
           `• 🔗 [Registration Link](${earliest.url})\n\n` +
           (sortedByDate[1] ? `_Next up after that: **${sortedByDate[1].title}** starting ${sortedByDate[1].startDate}._` : "");
-        return finalizeResponse(replyText, actionsTaken, sourceChannel);
+        return finalizeResponse(replyText, actionsTaken, sourceChannel, trimmed);
       }
     }
 
@@ -189,14 +190,61 @@ export async function processAssistantChat(
     if (lower.includes("lowest") || lower.includes("smallest") || (lower.includes("minimum") && lower.includes("prize"))) {
       actionsTaken.push("Analyzed hackathon prize pools for lowest tier");
       replyText = `Looking through our regional database, **Cognition Hackathon 2026** at SIES GST (Nerul) has the lowest listed cash prize pool at **₹75,000**, followed by **Thane TechSprint** at **₹80,000** and **DJ Unicode / SIH** at **₹1,00,000**. On the high end, **MumbaiHacks** offers **₹5,00,000**!`;
-      return finalizeResponse(replyText, actionsTaken, sourceChannel);
+      return finalizeResponse(replyText, actionsTaken, sourceChannel, trimmed);
     }
 
     // Highest / Biggest prize pool
     if (lower.includes("highest") || lower.includes("biggest") || lower.includes("maximum") || lower.includes("largest")) {
       actionsTaken.push("Analyzed hackathon prize pools for highest prize tier");
       replyText = `The hackathon with the highest prize pool in Mumbai is **MumbaiHacks 2026** with a massive **₹5,00,000** total cash prize pool at Bombay Exhibition Centre, Goregaon! Following that are **Smart India Hackathon (SIH)** and **DJ Unicode Hackathon** at **₹1,00,000** each.`;
-      return finalizeResponse(replyText, actionsTaken, sourceChannel);
+      return finalizeResponse(replyText, actionsTaken, sourceChannel, trimmed);
+    }
+  }
+
+  // 2.8 Contextual follow-up resolution (for pronouns & ellipsis like "when is it?", "what is the deadline?", "what's the prize?")
+  const activeContext = getActiveContext(sourceChannel);
+  if (
+    activeContext.activeSubject &&
+    (lower.includes(" it") ||
+      lower.includes(" that") ||
+      lower.includes(" for it") ||
+      lower.startsWith("when is it") ||
+      lower.startsWith("when does it") ||
+      lower.startsWith("what is the deadline") ||
+      lower.startsWith("what's the deadline") ||
+      lower.startsWith("what is the prize") ||
+      lower.startsWith("where is it") ||
+      lower.startsWith("what venue"))
+  ) {
+    if (activeContext.activeCategory === "hackathon") {
+      const allHackathons = listUpcomingHackathons("all");
+      const matched = allHackathons.find(
+        (h) =>
+          activeContext.activeSubject?.toLowerCase().includes(h.title.toLowerCase()) ||
+          h.title.toLowerCase().includes(activeContext.activeSubject?.toLowerCase() || "")
+      );
+      if (matched) {
+        if (lower.includes("deadline") || lower.includes("registration")) {
+          actionsTaken.push(`Resolved contextual deadline for "${matched.title}"`);
+          replyText = `⏰ The registration deadline for **${matched.title}** is **${matched.registrationDeadline}**.\n• Conduction Dates: ${matched.startDate} → ${matched.endDate}\n• 🔗 [Registration Link](${matched.url})`;
+          return finalizeResponse(replyText, actionsTaken, sourceChannel, trimmed);
+        }
+        if (lower.includes("prize")) {
+          actionsTaken.push(`Resolved contextual prize pool for "${matched.title}"`);
+          replyText = `💰 The prize pool for **${matched.title}** is **${matched.prizePool || "Certificates & Swag"}**.\n• Venue: ${matched.venue}\n• 🔗 [Registration Link](${matched.url})`;
+          return finalizeResponse(replyText, actionsTaken, sourceChannel, trimmed);
+        }
+        if (lower.includes("where") || lower.includes("venue") || lower.includes("location")) {
+          actionsTaken.push(`Resolved contextual venue for "${matched.title}"`);
+          replyText = `📍 **${matched.title}** is hosted at **${matched.venue}** (${matched.cityZone.toUpperCase()}, Mode: ${matched.mode}).\n• Conduction Dates: ${matched.startDate} → ${matched.endDate}`;
+          return finalizeResponse(replyText, actionsTaken, sourceChannel, trimmed);
+        }
+        if (lower.includes("when") || lower.includes("date")) {
+          actionsTaken.push(`Resolved contextual dates for "${matched.title}"`);
+          replyText = `🗓️ **${matched.title}** runs from **${matched.startDate}** to **${matched.endDate}**.\n• Registration deadline: **${matched.registrationDeadline}**\n• 🔗 [Registration Link](${matched.url})`;
+          return finalizeResponse(replyText, actionsTaken, sourceChannel, trimmed);
+        }
+      }
     }
   }
 
@@ -260,7 +308,7 @@ export async function processAssistantChat(
         `✅ Added coursework: **${title}** (${est}m, Priority: ${newTask.priority}).\n` +
         (isSub ? `🖨️ Physical submission flagged for lab turn / xerox tracking.\n` : "") +
         `Tonight's 11 PM sprint schedule updated.`;
-      return finalizeResponse(replyText, actionsTaken, sourceChannel);
+      return finalizeResponse(replyText, actionsTaken, sourceChannel, trimmed);
     }
 
     case "REPORT_DONE": {
@@ -277,14 +325,14 @@ export async function processAssistantChat(
       } else {
         replyText = `✨ No active pending tasks right now! You're completely caught up.`;
       }
-      return finalizeResponse(replyText, actionsTaken, sourceChannel);
+      return finalizeResponse(replyText, actionsTaken, sourceChannel, trimmed);
     }
 
     case "REPORT_SLIP": {
       const replanResult = handleTaskOverrun(ist.timeStr, ist.dateStr);
       actionsTaken.push("Rebalanced schedule due to slip");
       replyText = `⚡ ${replanResult.summaryExplanation}\nStrictly protected your **9:30 PM dinner** and **4:30 AM sleep anchor**.`;
-      return finalizeResponse(replyText, actionsTaken, sourceChannel);
+      return finalizeResponse(replyText, actionsTaken, sourceChannel, trimmed);
     }
 
     case "PLAN_TONIGHT": {
@@ -292,7 +340,7 @@ export async function processAssistantChat(
       const plan = scheduleEveningPlan(tasks, ist.dateStr, ist.timeStr);
       actionsTaken.push(`Generated evening plan with ${plan.blocks.length} blocks`);
       replyText = formatPlanMessage(plan);
-      return finalizeResponse(replyText, actionsTaken, sourceChannel);
+      return finalizeResponse(replyText, actionsTaken, sourceChannel, trimmed);
     }
 
     case "QUERY_NEXT": {
@@ -308,7 +356,7 @@ export async function processAssistantChat(
       } else {
         replyText = `✨ No tasks in queue! Current phase: **${phase.label}** (${phase.description}).`;
       }
-      return finalizeResponse(replyText, actionsTaken, sourceChannel);
+      return finalizeResponse(replyText, actionsTaken, sourceChannel, trimmed);
     }
 
     case "FIND_HACKATHONS": {
@@ -330,7 +378,7 @@ export async function processAssistantChat(
         );
         replyText = `🏆 **Upcoming Regional Hackathons:**\n\n` + lines.join("\n\n");
       }
-      return finalizeResponse(replyText, actionsTaken, sourceChannel);
+      return finalizeResponse(replyText, actionsTaken, sourceChannel, trimmed);
     }
 
     case "LOG_MEAL": {
@@ -351,7 +399,7 @@ export async function processAssistantChat(
         actionsTaken.push("Logged custom meal (+25g protein)");
         replyText = `🍱 Logged **Nutritious Meal** (+25g P, 400 kcal). Keep hitting your macros!`;
       }
-      return finalizeResponse(replyText, actionsTaken, sourceChannel);
+      return finalizeResponse(replyText, actionsTaken, sourceChannel, trimmed);
     }
   }
 
@@ -450,13 +498,14 @@ CRITICAL INSTRUCTIONS:
     recordMemory("preference", `User shared: "${trimmed}"`, "chat", { importance: 3 }).catch(console.warn);
   }
 
-  return finalizeResponse(replyText, actionsTaken, sourceChannel);
+  return finalizeResponse(replyText, actionsTaken, sourceChannel, trimmed);
 }
 
 function finalizeResponse(
   replyText: string,
   actionsTaken: string[],
-  sourceChannel: string
+  sourceChannel: string,
+  userText?: string
 ): { reply: string; actionsTaken: string[] } {
   appendChatMessage({
     id: crypto.randomUUID(),
@@ -466,6 +515,10 @@ function finalizeResponse(
     actionsTaken,
     channel: sourceChannel,
   });
+
+  if (userText) {
+    updateActiveContext(userText, replyText, actionsTaken, sourceChannel).catch(console.warn);
+  }
 
   return { reply: replyText, actionsTaken };
 }
