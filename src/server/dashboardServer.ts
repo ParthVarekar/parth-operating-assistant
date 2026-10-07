@@ -24,7 +24,11 @@ import {
 import { getPendingPrintItems } from "../services/printBundlerService.js";
 import { handleTaskOverrun } from "../planner/replanEngine.js";
 import { isWhatsAppConfigured } from "../services/whatsappService.js";
-import { getDiscordWebhookUrl } from "../services/discordService.js";
+import {
+  getDiscordWebhookUrl,
+  getDiscordGatewayStatus,
+  provisionAllDiscordGuilds,
+} from "../services/discordService.js";
 import { getActiveGitHubUsername } from "../services/githubService.js";
 import { getTrelloAccessToken } from "../services/trelloService.js";
 import { getUserProfile } from "../db/repositories/habitRepository.js";
@@ -2494,6 +2498,23 @@ export function startDashboardServer(customPort?: number): http.Server {
         const memories = getRecentMemories(50);
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ success: true, count: memories.length, memories }));
+        return;
+      }
+
+      // 15. Discord Gateway Status API
+      if (pathname === "/api/discord/status" && req.method === "GET") {
+        const status = getDiscordGatewayStatus();
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true, ...status }));
+        return;
+      }
+
+      // 16. Trigger Discord Guild Provisioning API
+      if (pathname === "/api/discord/setup" && req.method === "POST") {
+        const prov = await provisionAllDiscordGuilds();
+        const code = prov.success ? 200 : 400;
+        res.writeHead(code, { "Content-Type": "application/json" });
+        res.end(JSON.stringify(prov));
         return;
       }
 

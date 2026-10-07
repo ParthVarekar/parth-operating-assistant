@@ -67,22 +67,67 @@ export async function parseProfessorAnnouncement(
 
   // Heuristic Fallback
   const lower = announcementText.toLowerCase();
+
+  // 1. Immediately reject commercial deals, shopping, coupons, and sales
+  const isCommercial =
+    lower.includes("amazon.") ||
+    lower.includes("flipkart.") ||
+    lower.includes("bitli.in") ||
+    lower.includes("fktr.in") ||
+    lower.includes("coupon") ||
+    lower.includes("discount") ||
+    lower.includes("sale") ||
+    lower.includes("price :") ||
+    lower.includes("reg price") ||
+    lower.includes("buy qnty") ||
+    lower.includes("cashback") ||
+    lower.includes("off -");
+
+  if (isCommercial) {
+    return [];
+  }
+
+  // 2. Strict Academic / Coursework check
+  const hasAcademicCourseworkIndicators =
+    lower.includes("assignment") ||
+    lower.includes("submission") ||
+    lower.includes("journal") ||
+    lower.includes("experiment") ||
+    lower.includes("lab manual") ||
+    lower.includes("practical turn") ||
+    lower.includes("practical") ||
+    lower.includes("writeup") ||
+    lower.includes("black book") ||
+    lower.includes("synopsis") ||
+    lower.includes("question bank") ||
+    lower.includes("defaulter") ||
+    lower.includes("unit test") ||
+    lower.includes("ia1") ||
+    lower.includes("ia2") ||
+    lower.includes("viva") ||
+    lower.includes("due date") ||
+    lower.includes("submit by") ||
+    lower.includes("submit before");
+
+  if (!hasAcademicCourseworkIndicators) {
+    return [];
+  }
+
   const isPhysical =
     lower.includes("handwritten") ||
     lower.includes("print") ||
     lower.includes("journal") ||
     lower.includes("submission") ||
-    lower.includes("hard copy") ||
-    lower.includes("write");
+    lower.includes("hard copy");
 
-  // Subject detection heuristic
+  // Subject detection using strict word boundaries to avoid false positives (e.g. "os" matching "neostreak", "most")
   let subject = "Engineering";
-  if (lower.includes("aoa") || lower.includes("algorithm")) subject = "AOA";
-  else if (lower.includes("os") || lower.includes("operating system")) subject = "Operating Systems";
-  else if (lower.includes("dwm") || lower.includes("data warehouse") || lower.includes("mining")) subject = "DWM";
-  else if (lower.includes("aisc") || lower.includes("soft computing")) subject = "AISC";
-  else if (lower.includes("cn") || lower.includes("network")) subject = "Computer Networks";
-  else if (lower.includes("microprocessor")) subject = "Microprocessors";
+  if (/\b(aoa|algorithms?)\b/i.test(announcementText)) subject = "AOA";
+  else if (/\b(os|operating\s+systems?)\b/i.test(announcementText)) subject = "Operating Systems";
+  else if (/\b(dwm|data\s+warehouse|data\s+mining)\b/i.test(announcementText)) subject = "DWM";
+  else if (/\b(aisc|soft\s+computing|artificial\s+intelligence)\b/i.test(announcementText)) subject = "AISC";
+  else if (/\b(cn|computer\s+networks?|networking)\b/i.test(announcementText)) subject = "Computer Networks";
+  else if (/\b(microprocessors?|mp)\b/i.test(announcementText)) subject = "Microprocessors";
 
   return [
     {

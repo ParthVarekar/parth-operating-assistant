@@ -145,9 +145,58 @@ export function computeJaccardSimilarity(tokensA: string[], tokensB: string[]): 
   return union === 0 ? 0 : intersection / union;
 }
 
+const NON_ACADEMIC_DOMAINS = [
+  "amazon.",
+  "flipkart.",
+  "bitli.in",
+  "fktr.in",
+  "myntra.",
+  "ajio.",
+  "meesho.",
+  "zomato.",
+  "swiggy.",
+  "instagram.",
+  "facebook.",
+  "tiktok.",
+  "snapchat.",
+  "spotify.",
+  "netflix.",
+];
+
+/**
+ * Checks if a URL points to an academic, programming, or tech resource.
+ */
+export function isEducationalOrTechUrl(url: string): boolean {
+  const lower = url.toLowerCase();
+  if (NON_ACADEMIC_DOMAINS.some((d) => lower.includes(d))) {
+    return false;
+  }
+  return (
+    lower.includes("drive.google.") ||
+    lower.includes("docs.google.") ||
+    lower.includes("classroom.google.") ||
+    lower.includes("github.com") ||
+    lower.includes("gitlab.com") ||
+    lower.includes("notion.so") ||
+    lower.includes("notion.site") ||
+    lower.includes("arxiv.org") ||
+    lower.includes("kaggle.com") ||
+    lower.includes("leetcode.com") ||
+    lower.includes("geeksforgeeks.org") ||
+    lower.includes("stackoverflow.com") ||
+    lower.includes(".edu") ||
+    lower.includes(".ac.in") ||
+    lower.endsWith(".pdf") ||
+    lower.includes("/pdf") ||
+    lower.endsWith(".docx") ||
+    lower.endsWith(".pptx") ||
+    lower.endsWith(".zip")
+  );
+}
+
 /**
  * Determines whether message text is substantive study material or an actionable notice,
- * rather than casual conversational chit-chat.
+ * rather than casual conversational chit-chat or shopping link spam.
  */
 export function isSubstantiveContent(text: string): boolean {
   const trimmed = text.trim();
@@ -160,13 +209,30 @@ export function isSubstantiveContent(text: string): boolean {
     return false;
   }
 
+  // Filter out commercial shopping / coupon / sales deal spam
+  const isCommercial =
+    lower.includes("amazon.") ||
+    lower.includes("flipkart.") ||
+    lower.includes("bitli.in") ||
+    lower.includes("fktr.in") ||
+    lower.includes("coupon") ||
+    lower.includes("discount") ||
+    lower.includes("price :") ||
+    lower.includes("reg price") ||
+    lower.includes("loot") ||
+    lower.includes("buy qnty");
+
+  if (isCommercial) {
+    return false;
+  }
+
   // Check for academic or study resource keywords
   const hasKeyword = ACADEMIC_OR_RESOURCE_KEYWORDS.some((kw) => lower.includes(kw));
   if (hasKeyword) return true;
 
   // Check for study resource URLs
   const urls = extractUrls(text);
-  if (urls.length > 0) return true;
+  if (urls.some((u) => isEducationalOrTechUrl(u))) return true;
 
   // Length check: substantial detailed academic messages (> 75 chars with >= 10 words)
   const words = trimmed.split(/\s+/);
@@ -337,19 +403,22 @@ export function extractStudyResources(
   const lower = text.toLowerCase();
   const resources: StudyResource[] = [];
 
-  // Subject identification heuristic
+  // Subject identification heuristic with word boundaries
   let subject = "General";
-  if (lower.includes("os") || lower.includes("operating system")) subject = "Operating Systems";
-  else if (lower.includes("aoa") || lower.includes("algorithm")) subject = "AOA";
-  else if (lower.includes("cn") || lower.includes("network")) subject = "Computer Networks";
-  else if (lower.includes("dwm") || lower.includes("data mining")) subject = "DWM";
-  else if (lower.includes("aisc") || lower.includes("soft computing")) subject = "AISC";
-  else if (lower.includes("microprocessor")) subject = "Microprocessors";
+  if (/\b(os|operating\s+systems?)\b/i.test(text)) subject = "Operating Systems";
+  else if (/\b(aoa|algorithms?)\b/i.test(text)) subject = "AOA";
+  else if (/\b(cn|computer\s+networks?|networking)\b/i.test(text)) subject = "Computer Networks";
+  else if (/\b(dwm|data\s+warehouse|data\s+mining)\b/i.test(text)) subject = "DWM";
+  else if (/\b(aisc|soft\s+computing|artificial\s+intelligence)\b/i.test(text)) subject = "AISC";
+  else if (/\b(microprocessors?|mp)\b/i.test(text)) subject = "Microprocessors";
 
   const cleanSnippet = text.replace(/\s+/g, " ").trim().slice(0, 160);
 
   if (urls.length > 0) {
     for (const u of urls) {
+      if (!isEducationalOrTechUrl(u)) {
+        continue;
+      }
       let resourceType: StudyResource["resourceType"] = "web_resource";
       if (u.includes("drive.google.com")) resourceType = "drive_link";
       else if (u.includes("github.com")) resourceType = "github_repo";

@@ -362,6 +362,17 @@ export async function startWhatsAppClient(): Promise<boolean> {
         if (!conversationText) continue;
 
         const senderJid = msg.key.remoteJid ?? "unknown";
+
+        // Ignore public channels / newsletters, status broadcasts, and system streams
+        if (
+          senderJid.endsWith("@newsletter") ||
+          senderJid.endsWith("@broadcast") ||
+          senderJid === "status@broadcast" ||
+          senderJid === "0@s.whatsapp.net"
+        ) {
+          continue;
+        }
+
         const senderName = msg.pushName || senderJid.split("@")[0] || "Contact";
         const isGroup = senderJid.endsWith("@g.us");
 
