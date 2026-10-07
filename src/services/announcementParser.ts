@@ -67,6 +67,8 @@ export async function parseProfessorAnnouncement(
 
   // Heuristic Fallback
   const lower = announcementText.toLowerCase();
+  const normalizedForMatching = announcementText.replace(/[_.\-\/]/g, " ");
+  const lowerNormalized = normalizedForMatching.toLowerCase();
 
   // 1. Immediately reject commercial deals, shopping, coupons, and sales
   const isCommercial =
@@ -89,25 +91,29 @@ export async function parseProfessorAnnouncement(
 
   // 2. Strict Academic / Coursework check
   const hasAcademicCourseworkIndicators =
-    lower.includes("assignment") ||
-    lower.includes("submission") ||
-    lower.includes("journal") ||
-    lower.includes("experiment") ||
-    lower.includes("lab manual") ||
-    lower.includes("practical turn") ||
-    lower.includes("practical") ||
-    lower.includes("writeup") ||
-    lower.includes("black book") ||
-    lower.includes("synopsis") ||
-    lower.includes("question bank") ||
-    lower.includes("defaulter") ||
-    lower.includes("unit test") ||
-    lower.includes("ia1") ||
-    lower.includes("ia2") ||
-    lower.includes("viva") ||
-    lower.includes("due date") ||
-    lower.includes("submit by") ||
-    lower.includes("submit before");
+    lowerNormalized.includes("assignment") ||
+    lowerNormalized.includes("submission") ||
+    lowerNormalized.includes("journal") ||
+    lowerNormalized.includes("experiment") ||
+    lowerNormalized.includes("lab manual") ||
+    lowerNormalized.includes("practical turn") ||
+    lowerNormalized.includes("practical") ||
+    lowerNormalized.includes("writeup") ||
+    lowerNormalized.includes("black book") ||
+    lowerNormalized.includes("synopsis") ||
+    lowerNormalized.includes("question bank") ||
+    lowerNormalized.includes("qb") ||
+    lowerNormalized.includes("solution") ||
+    lowerNormalized.includes("exam ready") ||
+    lowerNormalized.includes("exam") ||
+    lowerNormalized.includes("defaulter") ||
+    lowerNormalized.includes("unit test") ||
+    lowerNormalized.includes("ia1") ||
+    lowerNormalized.includes("ia2") ||
+    lowerNormalized.includes("viva") ||
+    lowerNormalized.includes("due date") ||
+    lowerNormalized.includes("submit by") ||
+    lowerNormalized.includes("submit before");
 
   if (!hasAcademicCourseworkIndicators) {
     return [];
@@ -120,14 +126,17 @@ export async function parseProfessorAnnouncement(
     lower.includes("submission") ||
     lower.includes("hard copy");
 
-  // Subject detection using strict word boundaries to avoid false positives (e.g. "os" matching "neostreak", "most")
+  // Subject detection using strict word boundaries over normalized text
   let subject = "Engineering";
-  if (/\b(aoa|algorithms?)\b/i.test(announcementText)) subject = "AOA";
-  else if (/\b(os|operating\s+systems?)\b/i.test(announcementText)) subject = "Operating Systems";
-  else if (/\b(dwm|data\s+warehouse|data\s+mining)\b/i.test(announcementText)) subject = "DWM";
-  else if (/\b(aisc|soft\s+computing|artificial\s+intelligence)\b/i.test(announcementText)) subject = "AISC";
-  else if (/\b(cn|computer\s+networks?|networking)\b/i.test(announcementText)) subject = "Computer Networks";
-  else if (/\b(microprocessors?|mp)\b/i.test(announcementText)) subject = "Microprocessors";
+  if (/\b(aoa|algorithms?)\b/i.test(normalizedForMatching)) subject = "AOA";
+  else if (/\b(os|operating\s+systems?)\b/i.test(normalizedForMatching)) subject = "Operating Systems";
+  else if (/\b(dwm|data\s+warehouse|data\s+mining)\b/i.test(normalizedForMatching)) subject = "DWM";
+  else if (/\b(aisc|soft\s+computing|artificial\s+intelligence)\b/i.test(normalizedForMatching)) subject = "AISC";
+  else if (/\b(cn|computer\s+networks?|networking)\b/i.test(normalizedForMatching)) subject = "Computer Networks";
+  else if (/\b(wireless|mobile\s+communication|wmc)\b/i.test(normalizedForMatching)) subject = "Wireless & Mobile Communication";
+  else if (/\b(microprocessors?|mp)\b/i.test(normalizedForMatching)) subject = "Microprocessors";
+  else if (/\b(dbms|database)\b/i.test(normalizedForMatching)) subject = "Database Systems";
+  else if (/\b(cloud|cloud\s+computing)\b/i.test(normalizedForMatching)) subject = "Cloud Computing";
 
   return [
     {

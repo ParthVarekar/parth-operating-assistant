@@ -461,13 +461,20 @@ export async function startWhatsAppClient(): Promise<boolean> {
           // Extract study resources (Drive documents, GitHub repos, PDFs, lecture notes)
           const studyResources = extractStudyResources(conversationText, chatName, senderName);
 
-          // Ingest academic tasks and physical submissions
-          const ingestion = await ingestProfessorAnnouncement(conversationText);
+          // Ingest academic tasks and physical submissions (with rate-limit fault tolerance)
+          let ingestion = { tasksCreated: [] as Task[], physicalSubmissionsCount: 0 };
+          try {
+            ingestion = await ingestProfessorAnnouncement(conversationText);
+          } catch (ingestErr) {
+            console.warn("Announcement parser fallback:", ingestErr);
+          }
 
-          // If semantic evaluation found a coursework task or self-reminder but ingestion didn't create a task:
+          // If semantic evaluation found a coursework task, study resource, or self-reminder but ingestion didn't create a task:
           // Ensure task is created directly using the semantic evaluation result!
           if (
-            (semanticEval.category === "coursework_task" || isFromSelf) &&
+            (semanticEval.category === "coursework_task" ||
+              semanticEval.category === "study_resource" ||
+              isFromSelf) &&
             ingestion.tasksCreated.length === 0
           ) {
             const taskId = crypto.randomUUID();
@@ -505,10 +512,13 @@ export async function startWhatsAppClient(): Promise<boolean> {
             { metadata: { chatName, sender: senderName, isSelfNote: isFromSelf } }
           ).catch(console.warn);
 
+          // Guaranteed Broadcast: If content is verified academic material, always dispatch alerts!
           if (
-            ingestion.tasksCreated.length > 0 ||
-            ingestion.physicalSubmissionsCount > 0 ||
-            studyResources.length > 0
+            semanticEval.isStudyOrAcademic &&
+            (ingestion.tasksCreated.length > 0 ||
+              ingestion.physicalSubmissionsCount > 0 ||
+              studyResources.length > 0 ||
+              isFromSelf)
           ) {
             const alert: WhatsAppAcademicAlert = {
               id: crypto.randomUUID(),

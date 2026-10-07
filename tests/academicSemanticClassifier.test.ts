@@ -88,4 +88,25 @@ Bring hard copy for submission during your scheduled practical turn next Friday.
       expect(["coursework_task", "study_resource"]).toContain(res.category);
     }
   });
+
+  it("accurately classifies uploaded academic solution and question bank PDFs with underscores", async () => {
+    const docs = [
+      {
+        filename: "Wireless_Mobile_Communication_IA_Question_Bank_Solutions.pdf",
+        expectedSubject: "Wireless & Mobile Communication",
+      },
+      {
+        filename: "AISC_Module_4_5_6_Exam_Ready_Solutions_Verified.pdf",
+        expectedSubject: "AISC",
+      },
+    ];
+
+    for (const doc of docs) {
+      const res = await evaluateAcademicContentSemantic(doc.filename, "Jus study stuff", "Parth (Self-Note)");
+      expect(res.isStudyOrAcademic).toBe(true);
+      expect(res.isSelfNote).toBe(true);
+      expect(res.subject).toBe(doc.expectedSubject);
+      expect(["coursework_task", "study_resource"]).toContain(res.category);
+    }
+  });
 });

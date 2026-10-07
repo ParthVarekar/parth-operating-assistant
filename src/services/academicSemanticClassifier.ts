@@ -62,9 +62,13 @@ const ACADEMIC_SUBJECT_PATTERNS: Array<{ subject: string; regex: RegExp }> = [
   { subject: "Computer Networks", regex: /\b(computer\s+networks?|networking|tcp\/?ip|osi\s+model|subnetting|routing\s+protocol|packet\s+tracer|wireshark|socket\s+programming)\b|\b(cn)\b/i },
   { subject: "DWM", regex: /\b(dwm|data\s+warehous(e|ing)|data\s+mining|olap|etl|association\s+rules?|apriori|clustering|k-means)\b/i },
   { subject: "AISC", regex: /\b(aisc|soft\s+computing|fuzzy\s+logic|neural\s+network|genetic\s+algorithm|artificial\s+intelligence)\b/i },
+  { subject: "Wireless & Mobile Communication", regex: /\b(wireless|mobile\s+communication|wmc|cellular|gsm|cdma|lte|5g)\b/i },
   { subject: "Microprocessors", regex: /\b(microprocessors?|8086|assembly\s+language|registers?|interfacing|masm|emu8086)\b|\b(mp)\b/i },
   { subject: "Database Systems", regex: /\b(dbms|database\s+systems?|sql|normalization|acid|erd|relational\s+algebra)\b/i },
   { subject: "Distributed Systems", regex: /\b(distributed\s+systems?|rpc|rmi|clock\s+synchronization|chord|mapreduce)\b|\b(ds)\b/i },
+  { subject: "Cloud Computing", regex: /\b(cloud\s+computing|aws|azure|virtualization|docker|kubernetes|iaas|paas|saas)\b/i },
+  { subject: "Software Engineering", regex: /\b(software\s+engineering|sdlc|agile|scrum|uml|testing|se)\b/i },
+  { subject: "Cryptography & Network Security", regex: /\b(cryptography|network\s+security|cns|rsa|aes|des|cybersecurity|hash)\b/i },
 ];
 
 const COMMERCIAL_TERMS = [
@@ -86,6 +90,9 @@ export function evaluateAcademicContentHeuristics(
 ): AcademicSemanticEvaluation {
   const trimmed = text.trim();
   const lower = trimmed.toLowerCase();
+  // Normalize punctuation/underscores to spaces so word-boundary regexes (\b) match file names like AISC_Module_4_Solutions.pdf
+  const normalizedForMatching = trimmed.replace(/[_.\-\/]/g, " ");
+  const lowerNormalized = normalizedForMatching.toLowerCase();
   const isFromSelf = sender.toLowerCase().includes("self-note") || sender.toLowerCase().includes("parth");
 
   // 1. Immediate rejection of commercial deals and shopping spam
@@ -126,7 +133,7 @@ export function evaluateAcademicContentHeuristics(
   let matchedSubject = "General Engineering";
   let hasSubjectMatch = false;
   for (const item of ACADEMIC_SUBJECT_PATTERNS) {
-    if (item.regex.test(trimmed)) {
+    if (item.regex.test(normalizedForMatching)) {
       matchedSubject = item.subject;
       hasSubjectMatch = true;
       break;
@@ -135,28 +142,31 @@ export function evaluateAcademicContentHeuristics(
 
   // 4. Coursework / Lab Submission Indicators
   const hasSubmissionRequirement =
-    lower.includes("submit") ||
-    lower.includes("submission") ||
-    lower.includes("journal") ||
-    lower.includes("experiment") ||
-    lower.includes("practical turn") ||
-    lower.includes("lab manual") ||
-    lower.includes("defaulter") ||
-    lower.includes("writeup") ||
-    lower.includes("black book") ||
-    lower.includes("synopsis") ||
-    lower.includes("deadline") ||
-    lower.includes("due date");
+    lowerNormalized.includes("submit") ||
+    lowerNormalized.includes("submission") ||
+    lowerNormalized.includes("journal") ||
+    lowerNormalized.includes("experiment") ||
+    lowerNormalized.includes("practical turn") ||
+    lowerNormalized.includes("lab manual") ||
+    lowerNormalized.includes("defaulter") ||
+    lowerNormalized.includes("writeup") ||
+    lowerNormalized.includes("black book") ||
+    lowerNormalized.includes("synopsis") ||
+    lowerNormalized.includes("deadline") ||
+    lowerNormalized.includes("due date");
 
   const isCoursework =
     hasSubmissionRequirement ||
-    lower.includes("assignment") ||
-    lower.includes("question bank") ||
-    lower.includes("unit test") ||
-    lower.includes("ia1") ||
-    lower.includes("ia2") ||
-    lower.includes("viva") ||
-    lower.includes("practical");
+    lowerNormalized.includes("assignment") ||
+    lowerNormalized.includes("question bank") ||
+    lowerNormalized.includes("unit test") ||
+    lowerNormalized.includes("ia1") ||
+    lowerNormalized.includes("ia2") ||
+    lowerNormalized.includes("viva") ||
+    lowerNormalized.includes("practical") ||
+    lowerNormalized.includes("exam ready") ||
+    lowerNormalized.includes("exam") ||
+    lowerNormalized.includes("solution");
 
   // 5. Study Resource Indicators (Drive, GitHub, PDF notes, slides, question banks, solutions)
   const isStudyResource =
@@ -164,24 +174,27 @@ export function evaluateAcademicContentHeuristics(
     lower.includes("classroom.google.com") ||
     (lower.includes("github.com") && !lower.includes("amazon")) ||
     lower.includes(".pdf") ||
-    lower.includes("notes") ||
-    lower.includes("pyq") ||
-    lower.includes("lecture slides") ||
-    lower.includes("slides") ||
-    lower.includes("syllabus") ||
-    lower.includes("question bank") ||
-    lower.includes("qb") ||
-    lower.includes("solution") ||
-    lower.includes("reference material");
+    lower.includes(".docx") ||
+    lower.includes(".pptx") ||
+    lowerNormalized.includes("notes") ||
+    lowerNormalized.includes("pyq") ||
+    lowerNormalized.includes("lecture slides") ||
+    lowerNormalized.includes("slides") ||
+    lowerNormalized.includes("syllabus") ||
+    lowerNormalized.includes("question bank") ||
+    lowerNormalized.includes("qb") ||
+    lowerNormalized.includes("solution") ||
+    lowerNormalized.includes("module") ||
+    lowerNormalized.includes("reference material");
 
   // Academic announcement context
   const isAcademicAnnouncement =
-    lower.includes("timetable") ||
-    lower.includes("circular") ||
-    lower.includes("rescheduled") ||
-    lower.includes("notice to students") ||
-    lower.includes("dear students") ||
-    lower.includes("defaulter list");
+    lowerNormalized.includes("timetable") ||
+    lowerNormalized.includes("circular") ||
+    lowerNormalized.includes("rescheduled") ||
+    lowerNormalized.includes("notice to students") ||
+    lowerNormalized.includes("dear students") ||
+    lowerNormalized.includes("defaulter list");
 
   // 6. Self-reminder by Parth (e.g. "complete AOA", "read chapter", "prepare practical")
   if (isFromSelf) {
