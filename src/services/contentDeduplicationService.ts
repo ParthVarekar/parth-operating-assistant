@@ -447,11 +447,22 @@ export function extractStudyResources(
     lower.includes("notes") ||
     lower.includes("formula") ||
     lower.includes("important questions") ||
-    lower.includes("pyq")
+    lower.includes("pyq") ||
+    lower.includes("question bank") ||
+    lower.includes("qb") ||
+    lower.includes("solution") ||
+    lower.includes(".pdf")
   ) {
+    let title = `[${subject}] Reference Notes from ${sender}`;
+    if (lower.includes("qb") || lower.includes("question bank")) {
+      title = `[${subject}] Question Bank Solution from ${sender}`;
+    } else if (lower.includes("solution")) {
+      title = `[${subject}] Solutions from ${sender}`;
+    }
+
     resources.push({
       id: crypto.randomUUID(),
-      title: `[${subject}] Reference Notes from ${sender}`,
+      title,
       subject,
       resourceType: "notes_text",
       sourceChat: chatName,

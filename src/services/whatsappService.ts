@@ -88,6 +88,12 @@ const DEFAULT_MONITORED_GROUPS = [
   "be comps",
   "te comps",
   "se comps",
+  "study",
+  "jus study",
+  "just study",
+  "academics",
+  "notes",
+  "assignments",
 ];
 
 let activeSocket: WASocket | null = null;
@@ -238,14 +244,23 @@ export function extractWhatsAppMessageText(msg: any): string {
   if (!msg || !msg.message) return "";
 
   const m = msg.message;
+
+  if (m.documentWithCaptionMessage?.message?.documentMessage) {
+    const doc = m.documentWithCaptionMessage.message.documentMessage;
+    const parts = [doc.caption, doc.fileName].filter(Boolean);
+    if (parts.length > 0) return parts.join(" - ");
+  }
+
+  if (m.documentMessage) {
+    const doc = m.documentMessage;
+    const parts = [doc.caption, doc.fileName].filter(Boolean);
+    if (parts.length > 0) return parts.join(" - ");
+  }
+
   return (
     m.conversation ||
     m.extendedTextMessage?.text ||
     m.imageMessage?.caption ||
-    m.documentMessage?.caption ||
-    m.documentMessage?.fileName ||
-    m.documentWithCaptionMessage?.message?.documentMessage?.caption ||
-    m.documentWithCaptionMessage?.message?.documentMessage?.fileName ||
     m.videoMessage?.caption ||
     ""
   );

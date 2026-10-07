@@ -158,7 +158,7 @@ export function evaluateAcademicContentHeuristics(
     lower.includes("viva") ||
     lower.includes("practical");
 
-  // 5. Study Resource Indicators (Drive, GitHub, PDF notes, slides)
+  // 5. Study Resource Indicators (Drive, GitHub, PDF notes, slides, question banks, solutions)
   const isStudyResource =
     lower.includes("drive.google.com") ||
     lower.includes("classroom.google.com") ||
@@ -169,6 +169,9 @@ export function evaluateAcademicContentHeuristics(
     lower.includes("lecture slides") ||
     lower.includes("slides") ||
     lower.includes("syllabus") ||
+    lower.includes("question bank") ||
+    lower.includes("qb") ||
+    lower.includes("solution") ||
     lower.includes("reference material");
 
   // Academic announcement context
