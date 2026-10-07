@@ -30,7 +30,7 @@ async function main() {
   const printItems = getPendingPrintItems();
   console.log("Print Queue Count:", printItems.length);
   if (printItems[0]) {
-    console.log("Top Print Item:", printItems[0].title, "| Pages:", printItems[0].estimatedPages, "| Bound:", printItems[0].spiralBound);
+    console.log("Top Print Item:", printItems[0].title, "| Pages:", printItems[0].estimatedPages, "| Mode:", printItems[0].printMode);
   }
 
   // 3. Nutrition & Macro Tracking

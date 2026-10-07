@@ -21,6 +21,10 @@ import {
   recordIngestedContent,
   listSavedStudyResources,
 } from "./contentDeduplicationService.js";
+import { evaluateAcademicContentSemantic } from "./academicSemanticClassifier.js";
+import { recordMemory } from "./memoryService.js";
+import { insertTask } from "../db/repositories/taskRepository.js";
+import type { Task } from "../types/index.js";
 
 export function getWhatsAppAuthDir(): string {
   return process.env.WHATSAPP_AUTH_DIR || resolve(process.cwd(), "data", "whatsapp_auth");
@@ -356,8 +360,6 @@ export async function startWhatsAppClient(): Promise<boolean> {
       if (type !== "notify") return;
 
       for (const msg of messages) {
-        if (msg.key.fromMe) continue; // Ignore own outgoing messages
-
         const conversationText = extractWhatsAppMessageText(msg).trim();
         if (!conversationText) continue;
 
@@ -373,8 +375,12 @@ export async function startWhatsAppClient(): Promise<boolean> {
           continue;
         }
 
-        const senderName = msg.pushName || senderJid.split("@")[0] || "Contact";
+        const isFromSelf = Boolean(msg.key.fromMe);
         const isGroup = senderJid.endsWith("@g.us");
+
+        let senderName = isFromSelf
+          ? "Parth (Self-Note)"
+          : msg.pushName || senderJid.split("@")[0] || "Contact";
 
         let chatName = senderName;
         let isPriorityGroup = false;
@@ -383,16 +389,32 @@ export async function startWhatsAppClient(): Promise<boolean> {
           chatName = await resolveGroupSubject(sock, senderJid);
           isPriorityGroup = isMonitoredAcademicGroup(chatName);
         } else {
-          chatName = `${senderName} (DM)`;
+          chatName = isFromSelf ? "Self-Notes / Reminders" : `${senderName} (DM)`;
         }
 
         // 1. Substantive content filter: ignore casual chit-chat ("ok", "k", "haan", "cool", "see you")
-        // Always allow priority groups, but for all other chats/DMs require substantive content or links
-        if (!isPriorityGroup && !isSubstantiveContent(conversationText)) {
+        // Allow priority groups and self-notes to pass directly to semantic evaluation
+        if (!isPriorityGroup && !isFromSelf && !isSubstantiveContent(conversationText)) {
           continue;
         }
 
-        // 2. Deduplication Engine: Detect repeated notices, forwarded links, or redundant material
+        // 2. In-Depth Semantic Reasoning Verification:
+        // Evaluates whether the content is actual engineering study material, coursework, or self-reminder,
+        // rigorously rejecting commercial deals, shopping links, unrelated tech commentary, or casual banter.
+        const semanticEval = await evaluateAcademicContentSemantic(
+          conversationText,
+          chatName,
+          senderName
+        );
+
+        if (!semanticEval.isStudyOrAcademic || semanticEval.category === "unrelated") {
+          console.log(
+            `🛡️ Semantic Filter: Discarded non-academic content from [${chatName}] by ${senderName} (Reasoning: ${semanticEval.reasoning})`
+          );
+          continue;
+        }
+
+        // 3. Deduplication Engine: Detect repeated notices, forwarded links, or redundant material
         const dupCheck = checkContentDuplicate(conversationText, chatName, senderName);
         if (dupCheck.isDuplicate) {
           recordIngestedContent({
@@ -408,7 +430,9 @@ export async function startWhatsAppClient(): Promise<boolean> {
           continue;
         }
 
-        console.log(`📑 Ingesting unique material from [${chatName}] by ${senderName}: "${conversationText.slice(0, 60)}..."`);
+        console.log(
+          `🎓 Ingesting verified academic material from [${chatName}] by ${senderName} (Category: ${semanticEval.category}, Subject: ${semanticEval.subject}, Confidence: ${Math.round(semanticEval.confidence * 100)}%): "${conversationText.slice(0, 60)}..."`
+        );
 
         try {
           // Record content in deduplication index
@@ -416,6 +440,7 @@ export async function startWhatsAppClient(): Promise<boolean> {
             text: conversationText,
             chatName,
             sender: senderName,
+            category: semanticEval.category === "study_resource" ? "study_resource" : "academic_announcement",
           });
 
           // Extract study resources (Drive documents, GitHub repos, PDFs, lecture notes)
@@ -423,6 +448,47 @@ export async function startWhatsAppClient(): Promise<boolean> {
 
           // Ingest academic tasks and physical submissions
           const ingestion = await ingestProfessorAnnouncement(conversationText);
+
+          // If semantic evaluation found a coursework task or self-reminder but ingestion didn't create a task:
+          // Ensure task is created directly using the semantic evaluation result!
+          if (
+            (semanticEval.category === "coursework_task" || isFromSelf) &&
+            ingestion.tasksCreated.length === 0
+          ) {
+            const taskId = crypto.randomUUID();
+            const deadlineDate = new Date();
+            deadlineDate.setDate(deadlineDate.getDate() + (semanticEval.inferredDeadlineDays || 5));
+            deadlineDate.setHours(23, 59, 0, 0);
+
+            const newTask: Task = {
+              id: taskId,
+              title: isFromSelf
+                ? `[Self-Task] ${semanticEval.title}`
+                : `[${semanticEval.subject}] ${semanticEval.title}`,
+              description: conversationText,
+              category: semanticEval.isPhysicalSubmission ? "submission" : "assignment",
+              status: "pending",
+              priority: isFromSelf ? "high" : "medium",
+              estimatedMinutes: 45,
+              deadline: deadlineDate.toISOString(),
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+
+            insertTask(newTask);
+            ingestion.tasksCreated.push(newTask);
+            if (semanticEval.isPhysicalSubmission) {
+              ingestion.physicalSubmissionsCount++;
+            }
+          }
+
+          // Record memory of academic material
+          recordMemory(
+            "college",
+            `${senderName} logged ${semanticEval.subject}: "${semanticEval.title}"`,
+            "whatsapp",
+            { metadata: { chatName, sender: senderName, isSelfNote: isFromSelf } }
+          ).catch(console.warn);
 
           if (
             ingestion.tasksCreated.length > 0 ||
