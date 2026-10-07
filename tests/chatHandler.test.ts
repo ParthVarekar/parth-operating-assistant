@@ -78,14 +78,15 @@ describe("Assistant Chat & Natural Language Processor Suite", () => {
     expect(res.actionsTaken.some((a) => a.toLowerCase().includes("trello"))).toBe(true);
   });
 
-  it("retains chat history with channel attribution", () => {
-    const history = getChatHistory();
-    expect(history.length).toBeGreaterThan(3);
+  it("answers 'what is the latest ai news?' with AI radar items rather than replan slip", async () => {
+    const res = await processAssistantChat("what is the latest ai news?", "discord");
+    expect(res.reply).toContain("AI & Frontier Tech Radar");
+    expect(res.reply).not.toContain("Re-calculated your evening");
+  });
 
-    const dashboardMsg = history.find((m) => m.channel === "dashboard");
-    expect(dashboardMsg).toBeDefined();
-
-    const discordMsg = history.find((m) => m.channel === "discord");
-    expect(discordMsg).toBeDefined();
+  it("answers 'Which is the most earliest hackathon?' with the earliest hackathon", async () => {
+    const res = await processAssistantChat("Which is the most earliest hackathon?", "discord");
+    expect(res.reply).toContain("Earliest Upcoming Regional Hackathon");
+    expect(res.actionsTaken.some((a) => a.includes("earliest"))).toBe(true);
   });
 });

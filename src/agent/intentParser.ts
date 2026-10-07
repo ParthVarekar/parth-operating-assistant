@@ -70,8 +70,15 @@ function parseFallbackHeuristics(text: string): ParsedIntent {
     };
   }
 
-  // Check for slip or skip
-  if (lower.includes("didn't do") || lower.includes("skipped") || lower.includes("late") || lower.includes("slipped")) {
+  // Check for slip or skip (must indicate delay or omission, not "latest")
+  const isLateOrSlipped =
+    !lower.includes("latest") &&
+    (/\b(?:late|delayed|running late|behind schedule|overslept|missed)\b/i.test(lower) ||
+      lower.includes("didn't do") ||
+      lower.includes("skipped") ||
+      lower.includes("slipped"));
+
+  if (isLateOrSlipped) {
     return {
       intentType: "REPORT_SLIP",
       slipMinutes: 30,

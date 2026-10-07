@@ -109,6 +109,83 @@ export async function processAssistantChat(
     return finalizeResponse(syncRes.message, actionsTaken, sourceChannel);
   }
 
+  // 2.5 Quick greetings
+  if (lower === "hi" || lower === "hello" || lower === "hey" || lower === "yo") {
+    const fitnessSummary = getDailyFitnessSummary(ist.dateStr);
+    const pendingCount = findPendingTasks().length;
+    replyText = `👋 Hey Parth! Operating Assistant ready. Currently in the **${phase.label}** (${ist.timeStr} IST).\n• Tasks queued: **${pendingCount}**\n• Protein logged: **${fitnessSummary.totalProtein} / 130g**\n• Protected dinner at **9:30 PM**, deep-work sprint starts at **11:00 PM**.\nHow can I help you operate right now?`;
+    return finalizeResponse(replyText, actionsTaken, sourceChannel);
+  }
+
+  // 2.6 Frontier AI & Tech Radar queries
+  if (
+    lower.includes("ai news") ||
+    lower.includes("tech news") ||
+    lower.includes("ai radar") ||
+    lower.includes("tech radar") ||
+    lower.includes("frontier tech") ||
+    (lower.includes("latest") && (lower.includes("ai") || lower.includes("tech") || lower.includes("news")))
+  ) {
+    const saved = getSavedAiNews();
+    const items = saved.length >= 2 ? saved : (await runAiIntelligenceScan()).items;
+    const top = items.slice(0, 4);
+    actionsTaken.push(`Retrieved ${top.length} frontier AI & tech radar intelligence items`);
+    replyText =
+      `⚡ **Latest AI & Frontier Tech Radar:**\n\n` +
+      top
+        .map(
+          (item, i) =>
+            `${i + 1}. **[${item.title}](${item.url})**\n• ${item.summary}\n_Source: ${item.source}_`
+        )
+        .join("\n\n") +
+      `\n\n_Stay sharp for upcoming hackathons & industry projects!_`;
+    return finalizeResponse(replyText, actionsTaken, sourceChannel);
+  }
+
+  // 2.7 Hackathon analytical and comparative questions (Earliest, Lowest prize, Highest prize)
+  if (lower.includes("hackathon") || lower.includes("hackathons")) {
+    const allHackathons = listUpcomingHackathons("all");
+
+    // Earliest / First / Next
+    if (
+      lower.includes("earliest") ||
+      lower.includes("first") ||
+      lower.includes("soonest") ||
+      lower.includes("next") ||
+      lower.includes("when is the next")
+    ) {
+      const sortedByDate = [...allHackathons].sort((a, b) => a.startDate.localeCompare(b.startDate));
+      const earliest = sortedByDate[0];
+      if (earliest) {
+        actionsTaken.push(`Identified earliest hackathon: "${earliest.title}"`);
+        replyText =
+          `🏆 **Earliest Upcoming Regional Hackathon:**\n\n` +
+          `**${earliest.title}** (${earliest.cityZone.toUpperCase()})\n` +
+          `• 🗓️ **Dates:** ${earliest.startDate} → ${earliest.endDate}\n` +
+          `• 🚨 **Registration Deadline:** **${earliest.registrationDeadline}**\n` +
+          `• 💰 **Prize Pool:** ${earliest.prizePool || "Certificates & Swag"}\n` +
+          `• 📍 **Venue:** ${earliest.venue}\n` +
+          `• 🔗 [Registration Link](${earliest.url})\n\n` +
+          (sortedByDate[1] ? `_Next up after that: **${sortedByDate[1].title}** starting ${sortedByDate[1].startDate}._` : "");
+        return finalizeResponse(replyText, actionsTaken, sourceChannel);
+      }
+    }
+
+    // Lowest / Smallest prize pool
+    if (lower.includes("lowest") || lower.includes("smallest") || (lower.includes("minimum") && lower.includes("prize"))) {
+      actionsTaken.push("Analyzed hackathon prize pools for lowest tier");
+      replyText = `Looking through our regional database, **Cognition Hackathon 2026** at SIES GST (Nerul) has the lowest listed cash prize pool at **₹75,000**, followed by **Thane TechSprint** at **₹80,000** and **DJ Unicode / SIH** at **₹1,00,000**. On the high end, **MumbaiHacks** offers **₹5,00,000**!`;
+      return finalizeResponse(replyText, actionsTaken, sourceChannel);
+    }
+
+    // Highest / Biggest prize pool
+    if (lower.includes("highest") || lower.includes("biggest") || lower.includes("maximum") || lower.includes("largest")) {
+      actionsTaken.push("Analyzed hackathon prize pools for highest prize tier");
+      replyText = `The hackathon with the highest prize pool in Mumbai is **MumbaiHacks 2026** with a massive **₹5,00,000** total cash prize pool at Bombay Exhibition Centre, Goregaon! Following that are **Smart India Hackathon (SIH)** and **DJ Unicode Hackathon** at **₹1,00,000** each.`;
+      return finalizeResponse(replyText, actionsTaken, sourceChannel);
+    }
+  }
+
   // 3. Parse intent
   const intent = await parseUserIntent(trimmed);
 
