@@ -18,20 +18,37 @@ Parse the user's message into JSON with the following schema:
   "cityFilter": "mumbai" | "thane" | "navimumbai" | "pune" | "online" (optional),
   "responseMessage": string (brief, empathetic confirmation)
 }
+CRITICAL RULE: If the user is asking a specific question, comparing options, or seeking conversational advice (e.g., 'which hackathon has the lowest prize pool?', 'what should I study?'), you MUST categorize as 'CHAT', NOT 'FIND_HACKATHONS'. Only categorize as 'FIND_HACKATHONS' if the user explicitly asks for a list or directory of hackathons.
 Only output valid JSON matching this schema.
 `;
 
 function parseFallbackHeuristics(text: string): ParsedIntent {
   const lower = text.toLowerCase();
 
-  // Check for hackathons query
+  const isComparativeOrDetailQuestion =
+    lower.includes("lowest") ||
+    lower.includes("highest") ||
+    lower.includes("prize") ||
+    lower.includes("prizes") ||
+    lower.includes("winner") ||
+    lower.includes("compare") ||
+    lower.includes("difference") ||
+    lower.includes("vs") ||
+    lower.includes("worth") ||
+    lower.includes("tell me about") ||
+    lower.startsWith("why") ||
+    lower.startsWith("how do i") ||
+    lower.startsWith("how to");
+
+  // Check for hackathons query (only if not a specific comparative/analytical question)
   if (
-    lower.includes("hackathon") ||
-    lower.includes("hackathons") ||
-    lower.includes("hack ") ||
-    lower.startsWith("hack") ||
-    lower.includes("hackspit") ||
-    lower.includes("mumbaihacks")
+    !isComparativeOrDetailQuestion &&
+    (lower.includes("hackathon") ||
+      lower.includes("hackathons") ||
+      lower.includes("hack ") ||
+      lower.startsWith("hack") ||
+      lower.includes("hackspit") ||
+      lower.includes("mumbaihacks"))
   ) {
     let zone: "mumbai" | "thane" | "navimumbai" | "pune" | "online" | undefined;
     if (lower.includes("navi mumbai") || lower.includes("navimumbai") || lower.includes("panvel") || lower.includes("nerul") || lower.includes("vashi")) {
@@ -104,8 +121,47 @@ function parseFallbackHeuristics(text: string): ParsedIntent {
     };
   }
 
+  const isQuestion =
+    text.includes("?") ||
+    lower.startsWith("which") ||
+    lower.startsWith("what") ||
+    lower.startsWith("how") ||
+    lower.startsWith("why") ||
+    lower.startsWith("who") ||
+    lower.startsWith("can you") ||
+    lower.startsWith("tell me");
+
+  // If it's a question or inquiry, route to CHAT so conversational assistant reasons over live context
+  if (isQuestion || isComparativeOrDetailQuestion) {
+    return {
+      intentType: "CHAT",
+      responseMessage: "Processing your question...",
+    };
+  }
+
   // Check for assignment/submission creation
   const isSubmission = lower.includes("submission") || lower.includes("assignment") || lower.includes("print");
+  const isTask =
+    isSubmission ||
+    lower.includes("task") ||
+    lower.includes("todo") ||
+    lower.includes("add ") ||
+    lower.includes("need to") ||
+    lower.includes("have to") ||
+    lower.includes("work on") ||
+    lower.includes("study") ||
+    lower.includes("lab") ||
+    lower.includes("complete") ||
+    lower.includes("write") ||
+    lower.includes("code");
+
+  if (!isTask) {
+    return {
+      intentType: "CHAT",
+      responseMessage: "Processing your message...",
+    };
+  }
+
   const minuteMatch = text.match(/(\d+)\s*(mins?|minutes?|m|hours?|hrs?|h)/i);
   let estimated = 45;
   if (minuteMatch && minuteMatch[1]) {

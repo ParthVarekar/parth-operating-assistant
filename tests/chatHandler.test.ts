@@ -66,6 +66,18 @@ describe("Assistant Chat & Natural Language Processor Suite", () => {
     expect(res.reply).toContain("CURRENT FOCUS");
   });
 
+  it("answers specific comparative hackathon questions directly instead of returning generic list", async () => {
+    const res = await processAssistantChat("which hackathon has the lowest prize pool?", "dashboard");
+    expect(res.reply).toContain("Cognition");
+    expect(res.reply).toContain("75,000");
+  });
+
+  it("handles Trello delegation and sync queries via chat", async () => {
+    const res = await processAssistantChat("sync trello completions", "dashboard");
+    expect(res.reply).toBeDefined();
+    expect(res.actionsTaken.some((a) => a.toLowerCase().includes("trello"))).toBe(true);
+  });
+
   it("retains chat history with channel attribution", () => {
     const history = getChatHistory();
     expect(history.length).toBeGreaterThan(3);

@@ -153,6 +153,23 @@ describe("Dashboard Server & Hanzo Web GUI", () => {
     expect(resHealth.status).toBe(200);
   });
 
+  it("responds 200 OK on GET /api/ai-news with curated radar breakthroughs", async () => {
+    const res = await fetch(`http://127.0.0.1:${TEST_PORT}/api/ai-news`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.success).toBe(true);
+    expect(body.count).toBeGreaterThan(0);
+    expect(Array.isArray(body.news)).toBe(true);
+  });
+
+  it("responds 200 OK on GET /api/memory with persistent assistant memories", async () => {
+    const res = await fetch(`http://127.0.0.1:${TEST_PORT}/api/memory`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.success).toBe(true);
+    expect(Array.isArray(body.memories)).toBe(true);
+  });
+
   it("returns 404 on invalid route", async () => {
     const res = await fetch(`http://127.0.0.1:${TEST_PORT}/unknown-route`);
     expect(res.status).toBe(404);

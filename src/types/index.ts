@@ -139,3 +139,25 @@ export interface HackathonRecord {
   isBookmarked: boolean;
   discoveredAt: string;
 }
+
+export type MemoryCategory =
+  | "preference"
+  | "conversation"
+  | "task_log"
+  | "ai_tech_insight"
+  | "college"
+  | "decision"
+  | "hackathon_note";
+
+export interface MemoryEntry {
+  id: string;
+  category: MemoryCategory;
+  key?: string;
+  content: string;
+  source: "chat" | "whatsapp" | "trello" | "notion" | "slack" | "autonomous_heartbeat" | "ai_radar";
+  importance: number;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+

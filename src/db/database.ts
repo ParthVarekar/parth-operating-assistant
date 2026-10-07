@@ -158,6 +158,21 @@ export function initDatabase(customPath?: string): DatabaseSync {
 
     CREATE INDEX IF NOT EXISTS idx_nutrition_date ON nutrition_logs(date);
     CREATE INDEX IF NOT EXISTS idx_workout_date ON workout_logs(date);
+
+    CREATE TABLE IF NOT EXISTS memories (
+      id TEXT PRIMARY KEY,
+      category TEXT NOT NULL,
+      key TEXT,
+      content TEXT NOT NULL,
+      source TEXT NOT NULL,
+      importance INTEGER NOT NULL DEFAULT 1,
+      metadata_json TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_memories_category ON memories(category);
+    CREATE INDEX IF NOT EXISTS idx_memories_created_at ON memories(created_at);
   `);
 
   dbInstance = db;

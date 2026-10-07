@@ -3,7 +3,10 @@ import {
   GatewayIntentBits,
   EmbedBuilder,
   WebhookClient,
+  ChannelType,
+  PermissionFlagsBits,
   type TextChannel,
+  type Guild,
 } from "discord.js";
 import { getEnv } from "../config/env.js";
 import { getUserProfile, setUserProfile } from "../db/repositories/habitRepository.js";
@@ -14,6 +17,8 @@ import { formatPlanMessage } from "../agent/coach.js";
 import { getDailyFitnessSummary, formatFitnessDigest, logQuickPresetMeal } from "./fitnessService.js";
 import { listUpcomingHackathons } from "./hackathonService.js";
 import { processAssistantChat } from "../agent/chatHandler.js";
+import { runAiIntelligenceScan } from "./aiNewsService.js";
+import { syncTrelloTaskCompletions } from "./trelloService.js";
 
 export type DiscordChannelCategory =
   | "schedule"
@@ -21,6 +26,7 @@ export type DiscordChannelCategory =
   | "academic"
   | "fitness"
   | "github"
+  | "ai_news"
   | "chat"
   | "general";
 
@@ -39,6 +45,7 @@ const CATEGORY_COLORS: Record<DiscordChannelCategory, number> = {
   academic: 0xd97706, // Warm Amber / Terracotta
   fitness: 0x2ecc71, // Vibrant Green
   github: 0x24292e, // Obsidian / Dark
+  ai_news: 0x0052cc, // Frontier Blue
   chat: 0x5865f2, // Blurple
   general: 0x5865f2,
 };
@@ -49,6 +56,7 @@ const CATEGORY_CHANNEL_HINTS: Record<DiscordChannelCategory, string[]> = {
   academic: ["announcement", "announcements", "college", "academic", "turns", "xerox"],
   fitness: ["fitness", "gym", "macros", "nutrition", "meals"],
   github: ["github", "commits", "code", "dev"],
+  ai_news: ["ai-tech-news", "ai-news", "tech-news", "research", "radar"],
   chat: ["chat", "assistant", "bot", "general"],
   general: ["general", "bot-commands", "assistant"],
 };
@@ -363,6 +371,157 @@ export async function broadcastProactiveRemarkToDiscord(title: string, remark: s
 }
 
 /**
+ * Broadcasts an AI & Tech Intelligence breakthrough to Discord #ai-tech-news channel.
+ */
+export async function broadcastAiNewsToDiscord(item: {
+  title: string;
+  summary: string;
+  url: string;
+  source: string;
+  category: string;
+}): Promise<boolean> {
+  return sendSegregatedDiscordEmbed("ai_news", {
+    title: `⚡ [${item.category.toUpperCase()}] ${item.title}`,
+    description: `${item.summary}\n\n🔗 [Read Breakthrough Source](${item.url})`,
+    fields: [
+      { name: "Source", value: item.source, inline: true },
+      { name: "Category", value: item.category, inline: true },
+    ],
+    footer: "Antigravity • #ai-tech-news Radar",
+  });
+}
+
+/**
+ * Automatically provisions segregated channels and categories on Parth's Discord server
+ * if the bot has Manage Channels permission.
+ */
+export async function autoProvisionDiscordGuild(guild: Guild): Promise<{
+  created: string[];
+  alreadyPresent: string[];
+  error?: string;
+}> {
+  const me = guild.members.me;
+  if (me && !me.permissions.has(PermissionFlagsBits.ManageChannels)) {
+    return {
+      created: [],
+      alreadyPresent: [],
+      error: "Bot lacks 'Manage Channels' permission. Please grant the bot 'Manage Channels' permission in Server Settings -> Roles.",
+    };
+  }
+
+  const existingChannels = await guild.channels.fetch();
+  const created: string[] = [];
+  const alreadyPresent: string[] = [];
+
+  // Find or create Category: "PARTH.OS ASSISTANT"
+  let categoryChannel = existingChannels.find(
+    (c) => c?.type === ChannelType.GuildCategory && c.name.toUpperCase().includes("PARTH.OS")
+  );
+
+  if (!categoryChannel) {
+    categoryChannel = await guild.channels.create({
+      name: "📁 PARTH.OS ASSISTANT",
+      type: ChannelType.GuildCategory,
+    });
+    created.push("📁 PARTH.OS ASSISTANT (Category)");
+  }
+
+  const targetChannels: Array<{
+    name: string;
+    topic: string;
+    categoryKey: DiscordChannelCategory;
+    introTitle: string;
+    introDesc: string;
+  }> = [
+    {
+      name: "schedule",
+      topic: "Daily operating schedule, evening replans, 9:30 PM dinner & 4:30 AM sleep anchors",
+      categoryKey: "schedule",
+      introTitle: "📅 #schedule Channel Active",
+      introDesc: "Your daily timetable, deep-work sprints, and evening replan engine broadcasts will stream here.",
+    },
+    {
+      name: "hackathons",
+      topic: "Curated regional hackathons in Mumbai, Thane, Navi Mumbai, and Pune with deadlines & prize pools",
+      categoryKey: "hackathons",
+      introTitle: "🏆 #hackathons Radar Active",
+      introDesc: "Autonomous hackathon scouting updates and bookmark digests will be posted here.",
+    },
+    {
+      name: "academics",
+      topic: "WhatsApp class notices, laboratory turns, journals, printouts, and professor deadlines",
+      categoryKey: "academic",
+      introTitle: "📚 #academics Broadcast Active",
+      introDesc: "Verified coursework submissions and Xerox/printout checklists detected from WhatsApp will alert here.",
+    },
+    {
+      name: "fitness",
+      topic: "Daily 130g protein macro tracking, meal presets, and workout logs",
+      categoryKey: "fitness",
+      introTitle: "💪 #fitness Tracking Active",
+      introDesc: "Whey shake reminders, meal logging, and macro velocity digests stream to this channel.",
+    },
+    {
+      name: "github",
+      topic: "Daily commit history, streak counter, and 45m deep-work repository tracker",
+      categoryKey: "github",
+      introTitle: "🐙 #github Activity Active",
+      introDesc: "Daily commit progress and 1-commit-a-day rule monitoring stream here.",
+    },
+    {
+      name: "ai-tech-news",
+      topic: "Frontier AI research papers, Hacker News breakthroughs, systems GPU architectures, and tech radar",
+      categoryKey: "ai_news",
+      introTitle: "⚡ #ai-tech-news Radar Active",
+      introDesc: "Deep-niche AI breakthroughs, Hugging Face daily papers, and top systems news stream here to keep you ahead of the industry.",
+    },
+    {
+      name: "assistant-chat",
+      topic: "Direct conversation interface with your Personal AI Operating Assistant",
+      categoryKey: "chat",
+      introTitle: "💬 #assistant-chat Ready",
+      introDesc: "Chat directly with your assistant, delegate tasks, replan your schedule, or ask any question here!",
+    },
+  ];
+
+  for (const ch of targetChannels) {
+    const existing = existingChannels.find(
+      (c) => c?.type === ChannelType.GuildText && c.name.toLowerCase() === ch.name
+    );
+
+    if (existing) {
+      alreadyPresent.push(`#${ch.name}`);
+      setUserProfile(`discord_channel_id_${ch.categoryKey}`, existing.id);
+    } else {
+      const newChan = await guild.channels.create({
+        name: ch.name,
+        type: ChannelType.GuildText,
+        parent: categoryChannel.id,
+        topic: ch.topic,
+      });
+      created.push(`#${ch.name}`);
+      setUserProfile(`discord_channel_id_${ch.categoryKey}`, newChan.id);
+
+      // Post welcome embed
+      newChan
+        .send({
+          embeds: [
+            new EmbedBuilder()
+              .setTitle(ch.introTitle)
+              .setDescription(ch.introDesc)
+              .setColor(CATEGORY_COLORS[ch.categoryKey])
+              .setFooter({ text: "PARTH.OS • Autonomous Personal Assistant" })
+              .setTimestamp(),
+          ],
+        })
+        .catch(console.warn);
+    }
+  }
+
+  return { created, alreadyPresent };
+}
+
+/**
  * Starts the live Discord bot gateway if a bot token is provided.
  */
 export async function startDiscordBot(): Promise<boolean> {
@@ -384,10 +543,23 @@ export async function startDiscordBot(): Promise<boolean> {
       ],
     });
 
-    client.on("ready", () => {
+    client.on("ready", async () => {
       isBotLoggedIn = true;
       activeDiscordClient = client;
       console.log(`🤖 Discord Bot logged in as ${client.user?.tag}! Ready across segregated channels.`);
+
+      // Auto-provision server channels if server is blank / has only default channels
+      for (const guild of client.guilds.cache.values()) {
+        try {
+          const textChannels = guild.channels.cache.filter((c) => c.type === ChannelType.GuildText);
+          if (textChannels.size <= 2) {
+            console.log(`⚡ Auto-provisioning channels on server "${guild.name}"...`);
+            await autoProvisionDiscordGuild(guild);
+          }
+        } catch (err: any) {
+          console.warn(`Could not auto-provision channels on guild ${guild.name}:`, err?.message || err);
+        }
+      }
     });
 
     client.on("messageCreate", async (message) => {
@@ -561,6 +733,55 @@ export async function startDiscordBot(): Promise<boolean> {
               .setColor(0x9b59b6),
           ],
         });
+        return;
+      }
+
+      if (cmd === "setup") {
+        if (!message.guild) {
+          await message.reply("Please run `!setup` inside a Discord server channel.");
+          return;
+        }
+        await message.reply("⚙️ Scanning server and provisioning segregated channels for PARTH.OS...");
+        const result = await autoProvisionDiscordGuild(message.guild);
+        if (result.error) {
+          await message.reply(`⚠️ **Setup Incomplete**: ${result.error}`);
+        } else {
+          await message.reply(
+            `🎉 **Discord Auto-Configuration Complete!**\n` +
+            (result.created.length > 0 ? `• **Created:** ${result.created.join(", ")}\n` : "") +
+            (result.alreadyPresent.length > 0 ? `• **Configured:** ${result.alreadyPresent.join(", ")}\n` : "") +
+            `All segregated channels are active and mapped to autonomous broadcasts!`
+          );
+        }
+        return;
+      }
+
+      if (cmd === "news" || cmd === "tech" || cmd === "radar") {
+        const scan = await runAiIntelligenceScan();
+        const top = scan.items.slice(0, 4);
+        await message.reply({
+          embeds: [
+            new EmbedBuilder()
+              .setTitle("⚡ Latest AI & Frontier Tech Radar")
+              .setDescription(
+                top
+                  .map(
+                    (item, i) =>
+                      `${i + 1}. **[${item.title}](${item.url})**\n• ${item.summary}\n_Source: ${item.source}_`
+                  )
+                  .join("\n\n")
+              )
+              .setColor(0x0052cc)
+              .setFooter({ text: "PARTH.OS • Frontier Industry Intel" })
+              .setTimestamp(),
+          ],
+        });
+        return;
+      }
+
+      if (cmd === "trello" || cmd === "sync") {
+        const syncResult = await syncTrelloTaskCompletions();
+        await message.reply(syncResult.message);
         return;
       }
 

@@ -117,6 +117,44 @@ export async function broadcastTaskDoneToSlack(
 }
 
 /**
+ * Logs an operating memory entry or intelligence note to Slack brain channel.
+ */
+export async function logMemoryToSlack(
+  title: string,
+  content: string,
+  category: string = "Memory"
+): Promise<boolean> {
+  return sendSlackNotification({
+    title: `🧠 [Brain Memory] ${title}`,
+    text: content,
+    color: "#6B46C1", // Royal Brain Purple
+    fields: [
+      { title: "Category", value: category, short: true },
+      { title: "Recorded", value: new Date().toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata" }), short: true },
+    ],
+  });
+}
+
+/**
+ * Broadcasts an AI & Tech Intelligence breakthrough to Slack.
+ */
+export async function broadcastAiNewsToSlack(
+  title: string,
+  summary: string,
+  sourceUrl: string
+): Promise<boolean> {
+  return sendSlackNotification({
+    title: `⚡ [AI / Tech Radar] ${title}`,
+    text: `${summary}\n\n🔗 <${sourceUrl}|Read Source>`,
+    color: "#0052CC",
+    fields: [
+      { title: "Radar", value: "Cutting-Edge Industry Intel", short: true },
+      { title: "Timestamp", value: new Date().toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata" }), short: true },
+    ],
+  });
+}
+
+/**
  * Formats a clean Telegram markdown digest of the Slack connection status.
  */
 export function formatSlackStatusDigest(): string {
@@ -127,10 +165,10 @@ export function formatSlackStatusDigest(): string {
   if (!webhookUrl) {
     lines.push(`🔴 *Status:* Not Connected\n`);
     lines.push(
-      `Connect Slack to broadcast your daily operating plan, sprint milestones, and standups to your project or club channels!\n\n` +
+      `Connect Slack to broadcast your daily operating plan, sprint milestones, standups, and persistent brain memory!\n\n` +
       `⚡ *How to Connect in 20 Seconds:*\n` +
       `1️⃣ Open [api.slack.com/apps](https://api.slack.com/apps) or your workspace settings.\n` +
-      `2️⃣ Enable *Incoming Webhooks* on your desired channel (e.g. \`#standup\` or \`#tasks\`).\n` +
+      `2️⃣ Enable *Incoming Webhooks* on your desired channel (e.g. \`#parth-brain\` or \`#standup\`).\n` +
       `3️⃣ Send here: \`/slack_webhook <paste_url_here>\``
     );
     return lines.join("\n");
@@ -138,10 +176,11 @@ export function formatSlackStatusDigest(): string {
 
   lines.push(`🟢 *Status:* Connected`);
   lines.push(`🔗 *Webhook Channel:* Active`);
-  lines.push(`\n📢 *Broadcasting Features:*`);
+  lines.push(`\n📢 *Broadcasting & Brain Features:*`);
+  lines.push(`• Persistent memory & operational context logs`);
+  lines.push(`• Cutting-edge AI & Tech research radar`);
   lines.push(`• Evening Operating Plan auto-posts`);
   lines.push(`• Sprint velocity & completion alerts`);
-  lines.push(`• Critical physical submission reminders`);
 
   return lines.join("\n");
 }

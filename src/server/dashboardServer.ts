@@ -29,6 +29,8 @@ import { getActiveGitHubUsername } from "../services/githubService.js";
 import { getTrelloAccessToken } from "../services/trelloService.js";
 import { getUserProfile } from "../db/repositories/habitRepository.js";
 import { processAssistantChat, getChatHistory } from "../agent/chatHandler.js";
+import { getSavedAiNews, runAiIntelligenceScan } from "../services/aiNewsService.js";
+import { getRecentMemories } from "../db/repositories/memoryRepository.js";
 import type { Task, BlockStatus, CityZone } from "../types/index.js";
 
 const startTimeEpoch = Date.now();
@@ -269,6 +271,14 @@ export function getDashboardPayload() {
       memoryRssMb: Math.round(mem.rss / 1024 / 1024),
       memoryHeapMb: Math.round(mem.heapUsed / 1024 / 1024),
       platform: "Render Cloud / Free Web Service",
+    },
+    aiNews: {
+      count: getSavedAiNews().length,
+      items: getSavedAiNews().slice(0, 6),
+    },
+    memories: {
+      count: getRecentMemories(50).length,
+      recent: getRecentMemories(6),
     },
   };
 }
@@ -1648,6 +1658,42 @@ export function getDashboardHtml(): string {
           </div>
         </div>
       </div>
+
+      <!-- Row 4: AI & Deep-Tech Radar (Col 8) + Persistent Brain Memory (Col 4) -->
+      <div class="card col-8 fixed-tier-2">
+        <div class="card-header" style="margin-bottom:8px;padding-bottom:8px;">
+          <div class="card-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+            <span>AI & Deep-Tech Radar</span>
+            <span style="font-family:'Instrument Serif',serif;font-style:italic;font-size:15px;color:var(--amber-dark);text-transform:none;letter-spacing:0;">(Frontier Models, GPU Systems & Papers)</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <button class="btn" style="padding:2px 7px;font-size:10px;" onclick="triggerAiScan()">Scan Radar</button>
+            <div class="card-badge" id="ai-news-count">0 Insights</div>
+          </div>
+        </div>
+        <div class="scroll-box" id="ai-news-list" style="flex:1;overflow-y:auto;padding-right:2px;">
+          <div style="color:var(--text-muted);font-size:12px;padding:12px;text-align:center;">Scanning frontier AI & GPU research...</div>
+        </div>
+      </div>
+
+      <div class="card col-4 fixed-tier-2">
+        <div class="card-header" style="margin-bottom:8px;padding-bottom:8px;">
+          <div class="card-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1 2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <span>Persistent Brain Memory</span>
+          </div>
+          <div class="card-badge" id="memory-count">0 Notes</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;">
+          <div class="scroll-box" id="memory-list" style="flex:1;overflow-y:auto;margin-bottom:8px;">
+            <div style="color:var(--text-muted);font-size:11.5px;">Notion & Slack Brain active.</div>
+          </div>
+          <div style="padding-top:6px;border-top:1px solid var(--border-subtle);font-size:10px;color:var(--text-muted);font-family:'Fragment Mono',monospace;">
+            SYNC: SQLite ⇄ Notion ⇄ Slack
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2028,6 +2074,54 @@ export function getDashboardHtml(): string {
       document.getElementById('sys-mem').innerText = data.system.memoryRssMb + ' MB';
       const uptimeMins = Math.floor(data.system.uptimeSeconds / 60);
       document.getElementById('sys-uptime').innerText = uptimeMins + 'm ' + (data.system.uptimeSeconds % 60) + 's';
+
+      // AI News Radar
+      if (data.aiNews) {
+        const countBadge = document.getElementById('ai-news-count');
+        if (countBadge) countBadge.innerText = data.aiNews.count + ' Insights';
+        const aiContainer = document.getElementById('ai-news-list');
+        if (aiContainer && data.aiNews.items && data.aiNews.items.length > 0) {
+          aiContainer.innerHTML = data.aiNews.items.map(n => {
+            return '<div class="task-row" style="margin-bottom:6px;padding:8px 10px;">' +
+              '<div style="flex:1;min-width:0;margin-right:8px;">' +
+                '<div style="font-size:12px;font-weight:600;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' +
+                  '<a href="' + n.url + '" target="_blank" style="color:inherit;text-decoration:none;">' + n.title + '</a>' +
+                '</div>' +
+                '<div style="font-size:11px;color:var(--text-secondary);margin-top:2px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + n.summary + '</div>' +
+              '</div>' +
+              '<span class="task-meta-tag" style="background:#FAF6EF;color:var(--amber-dark);">' + n.category.replace('_', ' ').toUpperCase() + '</span>' +
+            '</div>';
+          }).join('');
+        }
+      }
+
+      // Memory Brain
+      if (data.memories) {
+        const memCount = document.getElementById('memory-count');
+        if (memCount) memCount.innerText = data.memories.count + ' Entries';
+        const memContainer = document.getElementById('memory-list');
+        if (memContainer && data.memories.recent && data.memories.recent.length > 0) {
+          memContainer.innerHTML = data.memories.recent.map(m => {
+            return '<div style="background:var(--bg-surface-elevated);border:1px solid var(--border);border-radius:4px;padding:5px 8px;margin-bottom:4px;">' +
+              '<div style="font-size:10px;font-family:\'Fragment Mono\',monospace;color:var(--text-muted);text-transform:uppercase;">' + m.category + ' • ' + (m.source || 'chat') + '</div>' +
+              '<div style="font-size:11px;color:var(--text-main);margin-top:2px;">' + m.content + '</div>' +
+            '</div>';
+          }).join('');
+        }
+      }
+    }
+
+    async function triggerAiScan() {
+      showToast('Scanning AI Radar...');
+      try {
+        const res = await fetch('/api/ai-news/scan', { method: 'POST' });
+        if (res.ok) {
+          showToast('Radar updated!');
+          refreshDashboard();
+        }
+      } catch (err) {
+        console.error(err);
+      }
     }
 
     async function logPreset(presetKey) {
@@ -2380,7 +2474,30 @@ export function startDashboardServer(customPort?: number): http.Server {
         return;
       }
 
-      // 11. Serve Root GUI Dashboard
+      // 13. AI Tech Radar API
+      if (pathname === "/api/ai-news" && req.method === "GET") {
+        const news = getSavedAiNews();
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true, count: news.length, news }));
+        return;
+      }
+
+      if (pathname === "/api/ai-news/scan" && req.method === "POST") {
+        const scanResult = await runAiIntelligenceScan();
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true, count: scanResult.totalRadarItems, news: scanResult.items }));
+        return;
+      }
+
+      // 14. Assistant Memory & Brain API
+      if (pathname === "/api/memory" && req.method === "GET") {
+        const memories = getRecentMemories(50);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true, count: memories.length, memories }));
+        return;
+      }
+
+      // 15. Serve Root GUI Dashboard
       if (pathname === "/" && (req.method === "GET" || req.method === "HEAD")) {
         const html = getDashboardHtml();
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });

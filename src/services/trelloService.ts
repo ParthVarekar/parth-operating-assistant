@@ -146,6 +146,148 @@ export async function moveCardToList(cardId: string, targetListId: string): Prom
 }
 
 /**
+ * Creates a new list on a Trello board.
+ */
+export async function createBoardList(boardId: string, name: string): Promise<TrelloList> {
+  return trelloFetch<TrelloList>(`/boards/${boardId}/lists`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+}
+
+/**
+ * Creates a new card on a Trello board.
+ */
+export async function createTrelloCard(params: {
+  boardId?: string;
+  listName?: string;
+  name: string;
+  desc?: string;
+  due?: string;
+}): Promise<TrelloCard> {
+  const boards = await getTrelloBoards();
+  if (boards.length === 0) {
+    throw new Error("No Trello boards found on account.");
+  }
+
+  const activeBoardId = params.boardId || getUserProfile<string>("active_trello_board_id") || boards[0]!.id;
+  const lists = await getBoardLists(activeBoardId);
+
+  const targetListName = params.listName || "Delegated by Assistant";
+  let targetList = lists.find(
+    (l) => l.name.toLowerCase() === targetListName.toLowerCase()
+  );
+
+  if (!targetList) {
+    targetList = lists.find((l) => l.name.toLowerCase().includes("to do") || l.name.toLowerCase().includes("todo"));
+  }
+  if (!targetList) {
+    targetList = await createBoardList(activeBoardId, targetListName);
+  }
+
+  const payload: Record<string, any> = {
+    idList: targetList.id,
+    name: params.name,
+    desc: params.desc || "Delegated by Antigravity Assistant",
+  };
+  if (params.due) {
+    payload.due = params.due;
+  }
+
+  return trelloFetch<TrelloCard>("/cards", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Delegates an active task to Trello so Parth can view and check it off there.
+ */
+export async function delegateTaskToTrello(
+  task: Task,
+  listName = "Delegated by Assistant"
+): Promise<TrelloCard | null> {
+  const token = getTrelloAccessToken();
+  if (!token) {
+    console.warn("Cannot delegate to Trello: No access token configured.");
+    return null;
+  }
+
+  try {
+    const card = await createTrelloCard({
+      name: task.title,
+      desc: `[Antigravity Assistant Task]\n• Category: ${task.category}\n• Estimated: ${task.estimatedMinutes}m\n• Priority: ${task.priority}\n${task.description ? `\nNotes: ${task.description}` : ""}`,
+      due: task.deadline,
+      listName,
+    });
+    console.log(`📌 Delegated task "${task.title}" to Trello (Card: ${card.id})`);
+    return card;
+  } catch (err: any) {
+    console.warn(`Failed to delegate task "${task.title}" to Trello:`, err?.message || err);
+    return null;
+  }
+}
+
+/**
+ * Checks cards moved to "Done" on Trello by Parth and marks corresponding local tasks completed.
+ */
+export async function syncTrelloTaskCompletions(): Promise<{
+  completedTasks: string[];
+  message: string;
+}> {
+  const token = getTrelloAccessToken();
+  if (!token) {
+    return { completedTasks: [], message: "Trello is not linked." };
+  }
+
+  try {
+    const boards = await getTrelloBoards();
+    if (boards.length === 0) {
+      return { completedTasks: [], message: "No Trello boards available." };
+    }
+
+    const board = boards[0]!;
+    const lists = await getBoardLists(board.id);
+    const cards = await getBoardCards(board.id);
+
+    const doneListIds = new Set(
+      lists
+        .filter((l) => {
+          const lower = l.name.toLowerCase();
+          return lower.includes("done") || lower.includes("completed") || lower.includes("finished");
+        })
+        .map((l) => l.id)
+    );
+
+    const pending = findPendingTasks();
+    const completedTasks: string[] = [];
+
+    for (const card of cards) {
+      if (doneListIds.has(card.idList)) {
+        const matchingTask = pending.find(
+          (t) => t.id === card.id || t.title.toLowerCase().trim() === card.name.toLowerCase().trim()
+        );
+        if (matchingTask) {
+          updateTaskStatus(matchingTask.id, "completed", matchingTask.estimatedMinutes);
+          completedTasks.push(matchingTask.title);
+        }
+      }
+    }
+
+    const message =
+      completedTasks.length > 0
+        ? `✅ Synced ${completedTasks.length} completed tasks from Trello: ${completedTasks.join(", ")}`
+        : `Trello sync complete: No newly completed cards found.`;
+
+    return { completedTasks, message };
+  } catch (err: any) {
+    return { completedTasks: [], message: `Trello completion sync failed: ${err?.message || err}` };
+  }
+}
+
+/**
  * Synchronizes cards from a Trello board into the assistant's tasks and submission pipeline.
  * @param specificBoardId Optional specific board ID. Defaults to first board if omitted.
  * @returns Summary of synced tasks.

@@ -21,6 +21,11 @@ const EnvSchema = z.object({
   DISCORD_BOT_TOKEN: z.string().default(""),
   DISCORD_CHANNEL_ID: z.string().default(""),
   SLACK_WEBHOOK_URL: z.string().default(""),
+  NOTION_API_KEY: z.string().default(""),
+  NOTION_DATABASE_ID: z.string().default(""),
+  TRELLO_ACCESS_TOKEN: z.string().default(""),
+  TRELLO_REFRESH_TOKEN: z.string().default(""),
+  TRELLO_CLIENT_ID: z.string().default(""),
   PORT: z.coerce.number().default(3050),
 });
 
