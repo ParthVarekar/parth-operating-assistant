@@ -2536,18 +2536,23 @@ export function startDashboardServer(customPort?: number): http.Server {
       // 18. Ping Discord Gateway REST Diagnostics API
       if (pathname === "/api/discord/ping-discord" && req.method === "GET") {
         const token = getDiscordBotToken();
+        const targetHost = parsedUrl.searchParams.get("host") || "discord.com";
+        const targetUrl = `https://${targetHost}/api/v10/gateway/bot`;
         try {
           const t0 = Date.now();
-          const r = await fetch("https://discord.com/api/v10/gateway/bot", {
-            headers: { Authorization: `Bot ${token}` },
+          const r = await fetch(targetUrl, {
+            headers: {
+              Authorization: `Bot ${token}`,
+              "User-Agent": "DiscordBot (https://github.com/ParthVarekar/parth-operating-assistant, 1.0.0)",
+            },
             signal: AbortSignal.timeout(10000),
           });
           const text = await r.text();
           res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ status: r.status, elapsedMs: Date.now() - t0, body: text }));
+          res.end(JSON.stringify({ host: targetHost, status: r.status, elapsedMs: Date.now() - t0, body: text }));
         } catch (err: any) {
           res.writeHead(500, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: err?.message || String(err) }));
+          res.end(JSON.stringify({ host: targetHost, error: err?.message || String(err) }));
         }
         return;
       }

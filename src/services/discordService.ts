@@ -638,12 +638,16 @@ export async function startDiscordBot(): Promise<boolean> {
   lastDiscordError = null;
 
   try {
+    const env = getEnv();
     const client = new Client({
       intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
       ],
+      rest: {
+        api: env.DISCORD_API_BASE_URL || "https://discord.com/api",
+      },
     });
 
     activeDiscordClient = client;
