@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { parseUserIntent } from "./intentParser.js";
 import { generateCompletion } from "./modelClient.js";
+import { runAutonomousAgentLoop } from "./agentLoop.js";
 import { findPendingTasks, insertTask, updateTaskStatus } from "../db/repositories/taskRepository.js";
 import { scheduleEveningPlan } from "../planner/intervalScheduler.js";
 import { handleTaskOverrun } from "../planner/replanEngine.js";
@@ -81,6 +82,19 @@ export async function processAssistantChat(
     timestamp: new Date().toISOString(),
     channel: sourceChannel,
   });
+
+  // 1.5 Autonomous Agent Tool Loop (empowers LLM to decide on actions and tool calls)
+  try {
+    const agentResult = await runAutonomousAgentLoop(trimmed, getChatHistory());
+    if (agentResult && agentResult.reply) {
+      return finalizeResponse(agentResult.reply, agentResult.actionsTaken, sourceChannel);
+    }
+  } catch (err: unknown) {
+    if (process.env.DEBUG_AI) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.warn("Autonomous agent tool loop falling back:", errMsg);
+    }
+  }
 
   const ist = getISTDateTime();
   const phase = getCurrentRoutinePhase(ist.hours, ist.minutes);

@@ -10,6 +10,8 @@ import { saveMemoryToNotion, isNotionConfigured } from "./notionService.js";
 import { logMemoryToSlack, isSlackConfigured } from "./slackService.js";
 import type { MemoryCategory, MemoryEntry } from "../types/index.js";
 
+export { searchMemories } from "../db/repositories/memoryRepository.js";
+
 /**
  * Records a new memory, insight, user preference, or decision into the assistant's brain.
  * Persists locally to SQLite, and synchronizes to Notion and Slack if configured.

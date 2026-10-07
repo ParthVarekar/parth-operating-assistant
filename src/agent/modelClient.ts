@@ -76,3 +76,88 @@ export async function generateCompletion(request: CompletionRequest): Promise<st
 
   return response.choices[0]?.message.content ?? "";
 }
+
+export interface AgentToolCall {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
+}
+
+export interface AgentTurnResult {
+  content: string | null;
+  toolCalls?: AgentToolCall[];
+  rawMessage: OpenAI.ChatCompletionMessage;
+}
+
+export interface AgentCompletionOptions {
+  messages: OpenAI.ChatCompletionMessageParam[];
+  tools?: OpenAI.ChatCompletionTool[];
+  temperature?: number;
+}
+
+/**
+ * Executes a single conversational turn with OpenAI-compatible tool calling.
+ * Enables the model to autonomously select and invoke tools.
+ * @param options Messages, available tools, and optional temperature.
+ * @returns Parsed tool calls or final message content.
+ */
+export async function executeModelTurn(
+  options: AgentCompletionOptions
+): Promise<AgentTurnResult> {
+  const env = getEnv();
+
+  if (env.AI_PROVIDER === "mock" || !env.AI_API_KEY) {
+    return {
+      content: "Operating in offline mode. What would you like to plan?",
+      rawMessage: {
+        role: "assistant",
+        content: "Operating in offline mode. What would you like to plan?",
+        refusal: null,
+      },
+    };
+  }
+
+  const client = getModelClient();
+  const response = await client.chat.completions.create(
+    {
+      model: env.AI_MODEL,
+      messages: options.messages,
+      tools: options.tools && options.tools.length > 0 ? options.tools : undefined,
+      tool_choice: options.tools && options.tools.length > 0 ? "auto" : undefined,
+      temperature: options.temperature ?? 0.2,
+    },
+    { timeout: 12000 }
+  );
+
+  const choice = response.choices[0];
+  const message = choice?.message;
+
+  if (!message) {
+    throw new Error("No response message returned from model client");
+  }
+
+  const toolCalls: AgentToolCall[] = [];
+  if (message.tool_calls && message.tool_calls.length > 0) {
+    for (const tc of message.tool_calls) {
+      if (tc.type === "function") {
+        let parsedArgs: Record<string, unknown> = {};
+        try {
+          parsedArgs = tc.function.arguments ? JSON.parse(tc.function.arguments) : {};
+        } catch {
+          parsedArgs = {};
+        }
+        toolCalls.push({
+          id: tc.id,
+          name: tc.function.name,
+          arguments: parsedArgs,
+        });
+      }
+    }
+  }
+
+  return {
+    content: message.content ?? null,
+    toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+    rawMessage: message,
+  };
+}
