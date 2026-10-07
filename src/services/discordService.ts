@@ -628,9 +628,14 @@ export async function startDiscordBot(): Promise<boolean> {
       const content = message.content.trim();
       const channelName = "name" in message.channel ? (message.channel.name as string).toLowerCase() : "";
 
-      // 1. Natural Language Conversation in #assistant-chat or when @mentioned
+      // 1. Natural Language Conversation in #assistant-chat, #bot_1, #general, or when @mentioned
       const isMentioned = client.user ? message.mentions.has(client.user) : false;
-      const isChatChannel = channelName.includes("chat") || channelName.includes("assistant") || isMentioned;
+      const isChatChannel =
+        channelName.includes("chat") ||
+        channelName.includes("assistant") ||
+        channelName.includes("bot") ||
+        channelName.includes("general") ||
+        isMentioned;
 
       if (isChatChannel && !content.startsWith("!")) {
         // Strip bot mention
@@ -647,6 +652,22 @@ export async function startDiscordBot(): Promise<boolean> {
 
       const [command, ...args] = content.slice(1).split(/\s+/);
       const cmd = command?.toLowerCase();
+
+      if (cmd === "setup") {
+        if (message.guild) {
+          await message.reply("🛠️ Setting up your PARTH.OS operating server channels...");
+          const res = await autoProvisionDiscordGuild(message.guild);
+          if (res.error) {
+            await message.reply(`⚠️ Channel provisioning note: ${res.error}\n*(Ensure the bot has "Manage Channels" permission in your server)*`);
+          } else {
+            const summary = res.created.length > 0 ? `Created: ${res.created.join(", ")}` : "All channels already present!";
+            await message.reply(`✅ PARTH.OS setup complete! ${summary}\nHead over to \`#assistant-chat\` or \`#schedule-planner\` to begin!`);
+          }
+        } else {
+          await message.reply("Please run `!setup` inside a Discord server channel.");
+        }
+        return;
+      }
 
       if (cmd === "ping") {
         await message.reply("🏓 Pong! Antigravity Assistant is active and listening 24/7 in the cloud.");
