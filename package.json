@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "tsx src/index.ts",
+    "start": "node --dns-result-order=ipv4first ./node_modules/tsx/dist/cli.mjs src/index.ts",
     "dev": "tsx watch src/index.ts",
     "test": "vitest run",
     "auth:trello": "tsx src/integrations/trelloAuth.ts",

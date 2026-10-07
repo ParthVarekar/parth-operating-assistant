@@ -27,6 +27,7 @@ import { isWhatsAppConfigured } from "../services/whatsappService.js";
 import {
   getDiscordWebhookUrl,
   getDiscordGatewayStatus,
+  getDiscordBotToken,
   provisionAllDiscordGuilds,
   startDiscordBot,
 } from "../services/discordService.js";
@@ -2529,6 +2530,25 @@ export function startDashboardServer(customPort?: number): http.Server {
         const status = getDiscordGatewayStatus();
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ success: started, status }));
+        return;
+      }
+
+      // 18. Ping Discord Gateway REST Diagnostics API
+      if (pathname === "/api/discord/ping-discord" && req.method === "GET") {
+        const token = getDiscordBotToken();
+        try {
+          const t0 = Date.now();
+          const r = await fetch("https://discord.com/api/v10/gateway/bot", {
+            headers: { Authorization: `Bot ${token}` },
+            signal: AbortSignal.timeout(10000),
+          });
+          const text = await r.text();
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ status: r.status, elapsedMs: Date.now() - t0, body: text }));
+        } catch (err: any) {
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: err?.message || String(err) }));
+        }
         return;
       }
 
